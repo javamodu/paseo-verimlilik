@@ -1,5 +1,6 @@
 import type { PluginClientContext } from "@getpaseo/plugin/client";
-import { sozlesmeEnjekte, telemetriOzet } from "./shared/contracts";
+import { sozlesmeEnjekte } from "./shared/contracts";
+import { TelemetriEkrani } from "./client/telemetri";
 
 export default function contribute(client: PluginClientContext) {
   client.addCommandCenterItem({
@@ -24,15 +25,15 @@ export default function contribute(client: PluginClientContext) {
     },
   });
 
+  client.addScreen({ id: "telemetri", title: "Telemetri özeti", Component: TelemetriEkrani });
   client.addCommandCenterItem({
     id: "telemetri-ozet",
-    title: "Verimlilik telemetri özetini kopyala",
+    title: "Verimlilik telemetri özetini aç",
     icon: "Activity",
     keywords: ["telemetri", "ozet", "kabul", "tur", "verimlilik"],
     context: "workspace",
-    async onSelect({ workspace, rpc }) {
-      const ozet = await rpc(telemetriOzet, { cwd: workspace.directory });
-      console.log("[paseo-verimlilik] telemetri ozeti", ozet);
+    onSelect({ workspace, openScreen }) {
+      openScreen({ screenId: "telemetri", params: { cwd: workspace.directory } });
     },
   });
 
