@@ -1,0 +1,10 @@
+{
+    "etiket":  "v0.7-kilit",
+    "tarih":  "2026-10-12",
+    "commit":  "f3a3c01",
+    "doctor":  null,
+    "hedefler":  null,
+    "eksenPuanlari":  null,
+    "ekOzet":  "npm test yesil - typecheck temiz",
+    "not":  "yukari tarama + EK ozetleri + editliMi shell + kalite esigi"
+}
