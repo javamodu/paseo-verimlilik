@@ -34,6 +34,7 @@ export function TelemetriEkrani({ theme, layout, params }: PluginScreenProps) {
           <Text style={styles.deger}>Tur: {data.tur}</Text>
           <Text style={styles.deger}>Loop dürtmesi: {data.loopDurtme}</Text>
           <Text style={styles.deger}>Finish-gate dürtmesi: {data.finishGateDurtme}</Text>
+          <Text style={styles.deger}>Anlaşılmazlık: {data.anlasilmazlik}</Text>
           <Text style={styles.deger}>
             Kabul oranı: {data.kabulOrani === null ? "henüz veri yok" : `%${data.kabulOrani} (${data.kabul}/${data.kabul + data.ret})`}
           </Text>

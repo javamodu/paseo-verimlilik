@@ -159,6 +159,17 @@ void (async () => {
   assert(kilitler.length === 1 && kilitler[0] === "v0.4", "yalniz kilit.json iceren surumler listelenir");
   fsp.rmSync(degTmp, { recursive: true, force: true });
 
+  const { karisiklikKaydet, kabulKaydet, telemetriOzetle } = await import("../server/telemetry");
+  const telTmp = fsp.mkdtempSync(os.tmpdir() + "/tel-");
+  karisiklikKaydet(telTmp, "a1", "codex", "onceki-tur-prompt-deseni(T)");
+  karisiklikKaydet(telTmp, "a1", "codex", "onceki-tur-prompt-deseni(T)");
+  kabulKaydet(telTmp, "a1", "codex", true, "x");
+  const telOz = telemetriOzetle(telTmp);
+  assert(telOz.anlasilmazlik === 2, "karisiklik kayitlari ozete sayilir");
+  assert(telOz.kabul === 1 && telOz.kabulOrani === 100, "kabul sayaci karisikliktan etkilenmez");
+  assert(telemetriOzetle(os.tmpdir() + "/tel-yok-" + Date.now()).anlasilmazlik === 0, "dosya yoksa anlasilmazlik 0");
+  fsp.rmSync(telTmp, { recursive: true, force: true });
+
   console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
   process.exit(hata === 0 ? 0 : 1);
 })();

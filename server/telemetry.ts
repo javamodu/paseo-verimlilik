@@ -6,7 +6,7 @@ import { toolCallOzetleri } from "./inspect";
 
 export interface TelemetriKayit {
   ts: string;
-  tip: "tur" | "kabul" | "lint";
+  tip: "tur" | "kabul" | "lint" | "karisiklik";
   agentId: string;
   provider: string;
   turnId?: string | null;
@@ -115,6 +115,16 @@ export function kabulKaydet(cwd: string, agentId: string, provider: string, kabu
   });
 }
 
+export function karisiklikKaydet(cwd: string, agentId: string, provider: string, sinyal: string): void {
+  telemetriYaz(cwd, {
+    ts: new Date().toISOString(),
+    tip: "karisiklik",
+    agentId,
+    provider,
+    detay: sinyal,
+  });
+}
+
 export function lintKaydet(cwd: string, alan: { kuralToplam: number; butceBytes: number; not?: string }): void {
   telemetriYaz(cwd, {
     ts: new Date().toISOString(),
@@ -129,10 +139,10 @@ export function lintKaydet(cwd: string, alan: { kuralToplam: number; butceBytes:
 
 export function telemetriOzetle(cwd: string): {
   dosya: string; tur: number; loopDurtme: number; finishGateDurtme: number;
-  kabul: number; ret: number; kabulOrani: number | null;
+  kabul: number; ret: number; kabulOrani: number | null; anlasilmazlik: number;
 } {
   const dosya = telemetriDosyasi(cwd);
-  let tur = 0, loopDurtme = 0, finishGateDurtme = 0, kabul = 0, ret = 0;
+  let tur = 0, loopDurtme = 0, finishGateDurtme = 0, kabul = 0, ret = 0, anlasilmazlik = 0;
   if (existsSync(dosya)) {
     for (const satir of readFileSync(dosya, "utf8").split(/\r?\n/)) {
       if (!satir.trim()) continue;
@@ -144,6 +154,7 @@ export function telemetriOzetle(cwd: string): {
         if (kayit.tip === "kabul") {
           if (kayit.kabul) kabul++; else ret++;
         }
+        if (kayit.tip === "karisiklik") anlasilmazlik++;
       } catch {
         // bozuk satir atlanir
       }
@@ -153,5 +164,6 @@ export function telemetriOzetle(cwd: string): {
   return {
     dosya, tur, loopDurtme, finishGateDurtme, kabul, ret,
     kabulOrani: toplam > 0 ? Math.round((kabul / toplam) * 1000) / 10 : null,
+    anlasilmazlik,
   };
 }

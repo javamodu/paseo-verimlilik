@@ -4,7 +4,7 @@ import type { PaseoApi } from "@getpaseo/client";
 import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
 import { sozlesmeEnjekte, telemetriOzet, sonDegerlendirme } from "./shared/contracts";
 import { enjeksiyonMetni } from "./server/sozlesme";
-import { kabulKaydet, lintKaydet, telemetriOzetle, turBaslat, turKaydet } from "./server/telemetry";
+import { kabulKaydet, karisiklikKaydet, lintKaydet, telemetriOzetle, turBaslat, turKaydet } from "./server/telemetry";
 import { loopKontrol } from "./server/loopguard";
 import { finishGateKontrol } from "./server/finishgate";
 import { permissionKontrol } from "./server/permission";
@@ -17,9 +17,11 @@ import { toolCallOzetleri } from "./server/inspect";
 import { sonDegerlendirmeOku } from "./server/degerlendirme";
 
 const RET_DESENI = /\b(hayır|yanlış|olmamış|bozuk|bozuldu|çalışmıyor|geri al|revert|undo|wrong|broken|hatalı)\b/i;
+const KARISIKLIK_DESENI = /\b(karışık|anlaşılmadı|anlamadım|anlaşılır değil|net değil|ne demek|unclear|confusing|confused)\b/i;
 
 interface TurState {
   oncekiEditliCompleted: boolean;
+  oncekiCompleted: boolean;
 }
 
 const turDurumu = new Map<string, TurState>();
@@ -106,15 +108,19 @@ export default function contribute(server: PluginServerContext) {
       }
 
       try {
-        const state = turDurumu.get(agentId) ?? { oncekiEditliCompleted: false };
+        const state = turDurumu.get(agentId) ?? { oncekiEditliCompleted: false, oncekiCompleted: false };
         const mesajlar = kullaniciMesajlari(event.timeline);
         const buTurunPromptu = mesajlar.length > 0 ? mesajlar[mesajlar.length - 1] : "";
         if (state.oncekiEditliCompleted && mesajlar.length >= 2) {
           const ret = RET_DESENI.test(buTurunPromptu);
           kabulKaydet(event.agent.cwd, agentId, event.agent.provider, !ret, "onceki-tur-prompt-deseni(T)");
         }
+        if (state.oncekiCompleted && mesajlar.length >= 2 && KARISIKLIK_DESENI.test(buTurunPromptu)) {
+          karisiklikKaydet(event.agent.cwd, agentId, event.agent.provider, "onceki-tur-prompt-deseni(T)");
+        }
         const ozetler = toolCallOzetleri(event.timeline);
         const editli = ozetler.some((o) => o.detailType === "edit" || o.detailType === "write");
+        state.oncekiCompleted = event.outcome.kind === "completed";
         state.oncekiEditliCompleted = event.outcome.kind === "completed" && editli;
         turDurumu.set(agentId, state);
       } catch (error) {

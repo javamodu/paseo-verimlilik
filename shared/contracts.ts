@@ -26,6 +26,7 @@ export const telemetriOzet = defineRpc({
     kabul: z.number(),
     ret: z.number(),
     kabulOrani: z.number().nullable(),
+    anlasilmazlik: z.number(),
   }),
 });
 
