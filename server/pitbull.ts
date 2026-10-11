@@ -13,11 +13,12 @@ interface PitbullState {
 }
 
 const durum = new Map<string, PitbullState>();
+const PLUGIN_BASLANGIC = Date.now();
 
 function stateAl(agentId: string): PitbullState {
   let s = durum.get(agentId);
   if (!s) {
-    s = { turBaslangic: null, ardisikStall: 0, sonDurtme: 0 };
+    s = { turBaslangic: null, ardisikStall: 0, sonDurtme: PLUGIN_BASLANGIC };
     durum.set(agentId, s);
   }
   return s;
@@ -92,4 +93,7 @@ export function pitbullBaslat(
     }
   }, TARAMA_MS);
   return () => clearInterval(timer);
+}
+export function _testIcinDurumVer(agentId: string): PitbullState | undefined {
+  return durum.get(agentId);
 }
