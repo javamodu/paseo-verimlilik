@@ -1,0 +1,10 @@
+{
+    "etiket":  "v0.5.2-kilit",
+    "tarih":  "2026-10-12",
+    "commit":  "ff7bedc",
+    "doctor":  null,
+    "hedefler":  null,
+    "eksenPuanlari":  null,
+    "ekOzet":  "npm test yesil - typecheck temiz",
+    "not":  "pitbull yazici/okuyucu sinifi"
+}
