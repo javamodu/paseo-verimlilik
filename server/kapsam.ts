@@ -2,6 +2,7 @@ import type { PluginHookContext } from "@getpaseo/plugin/server";
 import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
 import { sonKullaniciMesajiIndex, toolCallOzetleri } from "./inspect";
 import { telemetriYaz } from "./telemetry";
+import { ayarOku } from "./ayar";
 
 export const KAPSAM_TAVAN = 3;
 
@@ -27,7 +28,8 @@ export async function kapsamKontrol(
   context: PluginHookContext,
 ): Promise<boolean> {
   const { dosyalar } = kapsamSay(timeline);
-  if (dosyalar.length <= KAPSAM_TAVAN) {
+  const esik = ayarOku(cwd).kapsamEsik;
+  if (dosyalar.length <= esik) {
     return false;
   }
   const sonDurtme = durum.get(agentId) ?? 0;

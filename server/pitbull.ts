@@ -1,5 +1,6 @@
 import type { PluginHookAgent, PluginHookContext } from "@getpaseo/plugin/server";
 import { telemetriYaz } from "./telemetry";
+import { ayarOku } from "./ayar";
 
 const TARAMA_MS = 60_000;
 const YAZICI_STALL_ESIK_MS = 15 * 60_000;
@@ -50,7 +51,8 @@ export function pitbullTara(
     if (!s || s.turBaslangic === null) continue;
     const stallSuresi = simdi - s.turBaslangic;
     const yaziciModu = s.sonTurEditliydi;
-    const esik = yaziciModu ? YAZICI_STALL_ESIK_MS : OKUYUCU_STALL_ESIK_MS;
+    const ayar = ayarOku(agent.cwd);
+    const esik = (yaziciModu ? ayar.pitbullYaziciDk : ayar.pitbullOkuyucuDk) * 60_000;
     if (stallSuresi < esik) continue;
     if (simdi - s.sonDurtme < DURTME_COOLDOWN_MS) continue;
     if (s.ardisikStall >= MAKS_ARDISIK_STALL) {

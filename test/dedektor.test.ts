@@ -200,6 +200,21 @@ void (async () => {
   assert(izinKarari("git checkout -- src/a.ts") === "deny", "git checkout -- deny");
   assert(izinKarari("git checkout main") === null, "git checkout main dokunma");
 
+  const { ayarOku, VARSAYILAN_AYAR } = await import("../server/ayar");
+  const ayTmp = fsp.mkdtempSync(os.tmpdir() + "/ayar-");
+  assert(ayarOku(ayTmp).pitbullYaziciDk === 15 && ayarOku(ayTmp).enjeksiyonMod === "tam", "ayar yoksa varsayilan");
+  fsp.mkdirSync(ayTmp + "/.verimlilik", { recursive: true });
+  fsp.writeFileSync(ayTmp + "/.verimlilik/ayar.json", JSON.stringify({ pitbullYaziciDk: 30, kapsamEsik: 6, enjeksiyonMod: "isaretci" }));
+  const ay1 = ayarOku(ayTmp);
+  assert(ay1.pitbullYaziciDk === 30 && ay1.kapsamEsik === 6 && ay1.enjeksiyonMod === "isaretci", "ayar.json override okunur");
+  assert(ay1.pitbullOkuyucuDk === VARSAYILAN_AYAR.pitbullOkuyucuDk, "belirtilmeyen alan varsayilana duser");
+  fsp.writeFileSync(ayTmp + "/.verimlilik/ayar.json", "{bozuk json");
+  assert(ayarOku(ayTmp).pitbullYaziciDk === 15, "bozuk json varsayilana duser (crash yok)");
+  fsp.writeFileSync(ayTmp + "/.verimlilik/ayar.json", JSON.stringify({ pitbullYaziciDk: 9999, enjeksiyonMod: "sacma" }));
+  const ay2 = ayarOku(ayTmp);
+  assert(ay2.pitbullYaziciDk === 15 && ay2.enjeksiyonMod === "tam", "sinir-disi degerler reddedilir");
+  fsp.rmSync(ayTmp, { recursive: true, force: true });
+
   console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
   process.exit(hata === 0 ? 0 : 1);
 })();
