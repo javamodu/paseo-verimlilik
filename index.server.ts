@@ -2,7 +2,7 @@ import type { PluginServerContext } from "@getpaseo/plugin/server";
 import type { PluginHookAgent } from "@getpaseo/plugin/server";
 import type { PaseoApi } from "@getpaseo/client";
 import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
-import { sozlesmeEnjekte, telemetriOzet } from "./shared/contracts";
+import { sozlesmeEnjekte, telemetriOzet, sonDegerlendirme } from "./shared/contracts";
 import { enjeksiyonMetni } from "./server/sozlesme";
 import { kabulKaydet, lintKaydet, telemetriOzetle, turBaslat, turKaydet } from "./server/telemetry";
 import { loopKontrol } from "./server/loopguard";
@@ -14,6 +14,7 @@ import { kapsamKontrol } from "./server/kapsam";
 import { onboardingKontrol, onboardingTara } from "./server/onboarding";
 import { enjekteHandler } from "./server/enjekte";
 import { toolCallOzetleri } from "./server/inspect";
+import { sonDegerlendirmeOku } from "./server/degerlendirme";
 
 const RET_DESENI = /\b(hayır|yanlış|olmamış|bozuk|bozuldu|çalışmıyor|geri al|revert|undo|wrong|broken|hatalı)\b/i;
 
@@ -158,6 +159,7 @@ export default function contribute(server: PluginServerContext) {
 
   server.handle(sozlesmeEnjekte, enjekteHandler);
   server.handle(telemetriOzet, ({ cwd }) => telemetriOzetle(cwd));
+  server.handle(sonDegerlendirme, ({ cwd }) => sonDegerlendirmeOku(cwd));
 
   return () => {
     for (const remove of removers) remove();

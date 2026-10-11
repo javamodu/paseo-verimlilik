@@ -28,3 +28,13 @@ export const telemetriOzet = defineRpc({
     kabulOrani: z.number().nullable(),
   }),
 });
+
+export const sonDegerlendirme = defineRpc({
+  name: "degerlendirme.son",
+  input: z.object({ cwd: z.string() }),
+  output: z.object({
+    dosya: z.string().nullable(),
+    icerik: z.string().nullable(),
+    kilitler: z.array(z.string()),
+  }),
+});

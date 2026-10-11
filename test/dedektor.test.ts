@@ -142,6 +142,23 @@ void (async () => {
   fsp.rmSync(tmp, { recursive: true, force: true });
   fsp.rmSync(tmpBos, { recursive: true, force: true });
 
+  const { sonDegerlendirmeOku, kilitleriListele } = await import("../server/degerlendirme");
+  const degTmp = fsp.mkdtempSync(os.tmpdir() + "/deg-");
+  const bosSonuc = sonDegerlendirmeOku(degTmp);
+  assert(bosSonuc.dosya === null && bosSonuc.icerik === null && bosSonuc.kilitler.length === 0, "bos projede degerlendirme null doner");
+  fsp.mkdirSync(degTmp + "/raporlar/oz-degerlendirme", { recursive: true });
+  fsp.writeFileSync(degTmp + "/raporlar/oz-degerlendirme/2026-10-04.md", "eski rapor");
+  fsp.writeFileSync(degTmp + "/raporlar/oz-degerlendirme/2026-10-11.md", "yeni rapor icerik");
+  const doluSonuc = sonDegerlendirmeOku(degTmp);
+  assert(doluSonuc.dosya === "2026-10-11.md", "en yeni rapor adyla secilir (ISO siralama)");
+  assert(doluSonuc.icerik === "yeni rapor icerik", "rapor icerigi okunur");
+  fsp.mkdirSync(degTmp + "/surumler/v0.4", { recursive: true });
+  fsp.writeFileSync(degTmp + "/surumler/v0.4/kilit.json", "{}");
+  fsp.mkdirSync(degTmp + "/surumler/yarim", { recursive: true });
+  const kilitler = kilitleriListele(degTmp);
+  assert(kilitler.length === 1 && kilitler[0] === "v0.4", "yalniz kilit.json iceren surumler listelenir");
+  fsp.rmSync(degTmp, { recursive: true, force: true });
+
   console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
   process.exit(hata === 0 ? 0 : 1);
 })();

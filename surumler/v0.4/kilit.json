@@ -1,0 +1,9 @@
+{
+  "etiket": "v0.4-kilit",
+  "tarih": "2026-10-11",
+  "repo": "paseo-verimlilik",
+  "commit": "ff5b53c",
+  "doctor": null,
+  "ekOzet": "npm test 40/40 yesil · typecheck temiz · plugin running · 3 CC item kullanici ekran goruntusuyle dogrulandi",
+  "not": "Baz kilit — v0.5 oz-degerlendirme dongusu oncesi referans (K-0007)"
+}

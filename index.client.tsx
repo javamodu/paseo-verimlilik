@@ -1,6 +1,7 @@
 import type { PluginClientContext } from "@getpaseo/plugin/client";
 import { sozlesmeEnjekte } from "./shared/contracts";
 import { TelemetriEkrani } from "./client/telemetri";
+import { DegerlendirmeEkrani } from "./client/degerlendirme";
 
 export default function contribute(client: PluginClientContext) {
   client.addCommandCenterItem({
@@ -34,6 +35,18 @@ export default function contribute(client: PluginClientContext) {
     context: "workspace",
     onSelect({ workspace, openScreen }) {
       openScreen({ screenId: "telemetri", params: { cwd: workspace.directory } });
+    },
+  });
+
+  client.addScreen({ id: "degerlendirme", title: "Öz-değerlendirme", Component: DegerlendirmeEkrani });
+  client.addCommandCenterItem({
+    id: "degerlendirme-son",
+    title: "Son öz-değerlendirme raporunu aç",
+    icon: "Gauge",
+    keywords: ["degerlendirme", "oz-degerlendirme", "rapor", "kilit", "kiyas"],
+    context: "workspace",
+    onSelect({ workspace, openScreen }) {
+      openScreen({ screenId: "degerlendirme", params: { cwd: workspace.directory } });
     },
   });
 
