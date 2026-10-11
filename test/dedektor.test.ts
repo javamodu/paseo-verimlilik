@@ -32,5 +32,11 @@ assert(enj.kuralToplam > kuralSayisi(CEKIRDEK), "proje kurallari toplama eklendi
 const bos = enjeksiyonMetni("D:\\", "");
 assert(bos.metin.includes("ilk-15-dakika"), "bossuz projede onboarding isaretcisi duser");
 
+
+const uzunA = "Get-Content " + "A".repeat(300);
+const uzunB = "Get-Content " + "B".repeat(300);
+const uzunlar = toolCallOzetleri([tc("exec", "shell", { command: uzunA }), tc("exec", "shell", { command: uzunB }), tc("exec", "shell", { command: uzunA })]);
+assert(uzunlar[0].hash !== uzunlar[1].hash, "uzun komutlar birbirinden ayrilir (200+ char kirpma)");
+assert(uzunlar[0].hash === uzunlar[2].hash, "ayni uzun komut ayni hash");
 console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
 process.exit(hata === 0 ? 0 : 1);

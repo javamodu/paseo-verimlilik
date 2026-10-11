@@ -44,7 +44,7 @@ function stableStringify(value: unknown): string {
     return "[" + value.map(stableStringify).join(",") + "]";
   }
   const entries = Object.entries(value as Record<string, unknown>)
-    .filter(([, v]) => typeof v !== "string" || v.length <= 200)
+    .map(([k, v]): [string, unknown] => (typeof v === "string" && v.length > 200 ? [k, v.slice(0, 200) + "~len=" + v.length] : [k, v]))
     .sort(([a], [b]) => (a < b ? -1 : 1))
     .map(([k, v]) => JSON.stringify(k) + ":" + stableStringify(v));
   return "{" + entries.join(",") + "}";
