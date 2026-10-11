@@ -15,7 +15,7 @@ export const VARSAYILAN_AYAR: VerimlilikAyar = {
   enjeksiyonMod: "tam",
 };
 
-const cache = new Map<string, { mt: number; ayar: VerimlilikAyar }>();
+const cache = new Map<string, { mt: number; boyut: number; ayar: VerimlilikAyar }>();
 
 function sayiAl(deger: unknown, min: number, maks: number, dusus: number): number {
   return typeof deger === "number" && Number.isFinite(deger) && deger >= min && deger <= maks ? deger : dusus;
@@ -25,9 +25,9 @@ export function ayarOku(cwd: string): VerimlilikAyar {
   const dosya = join(cwd, ".verimlilik", "ayar.json");
   try {
     if (!existsSync(dosya)) return VARSAYILAN_AYAR;
-    const mt = statSync(dosya).mtimeMs;
+    const st = statSync(dosya);
     const c = cache.get(cwd);
-    if (c && c.mt === mt) return c.ayar;
+    if (c && c.mt === st.mtimeMs && c.boyut === st.size) return c.ayar;
     const ham = JSON.parse(readFileSync(dosya, "utf8")) as Record<string, unknown>;
     const mod = ham.enjeksiyonMod;
     const ayar: VerimlilikAyar = {
@@ -36,7 +36,7 @@ export function ayarOku(cwd: string): VerimlilikAyar {
       kapsamEsik: sayiAl(ham.kapsamEsik, 1, 50, VARSAYILAN_AYAR.kapsamEsik),
       enjeksiyonMod: mod === "isaretci" || mod === "kapali" ? mod : "tam",
     };
-    cache.set(cwd, { mt, ayar });
+    cache.set(cwd, { mt: st.mtimeMs, boyut: st.size, ayar });
     return ayar;
   } catch {
     return VARSAYILAN_AYAR;

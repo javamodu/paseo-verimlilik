@@ -4,9 +4,10 @@ import type { PluginHookContext } from "@getpaseo/plugin/server";
 import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
 import { latestOutputText } from "./inspect";
 import { telemetriYaz } from "./telemetry";
+import { katmanKokuBul } from "./sozlesme";
 
 export function sonHandoff(cwd: string): string | null {
-  const dir = join(cwd, "plans", "handoff");
+  const dir = join(katmanKokuBul(cwd), "plans", "handoff");
   if (!existsSync(dir)) return null;
   try {
     const dosyalar = readdirSync(dir)
@@ -39,9 +40,10 @@ export function onboardingTara(agentId: string, cwd: string): void {
     beklentiler.set(agentId, { tip: "echo", hedef: handoff, tur: 0 });
     return;
   }
-  const l0 = existsSync(join(cwd, "AGENTS.md")) || existsSync(join(cwd, "ANAYASA.md"));
-  const l1 = existsSync(join(cwd, "STATE_BOARD.md"));
-  const l5 = existsSync(join(cwd, "DERSLER.md"));
+  const kok = katmanKokuBul(cwd);
+  const l0 = existsSync(join(kok, "AGENTS.md")) || existsSync(join(kok, "ANAYASA.md"));
+  const l1 = existsSync(join(kok, "STATE_BOARD.md"));
+  const l5 = existsSync(join(kok, "DERSLER.md"));
   if (!l0 && !l1 && !l5) {
     beklentiler.set(agentId, { tip: "iskelet", hedef: "L0/L1/L5", tur: 0 });
   }
@@ -78,16 +80,17 @@ export async function onboardingKontrol(
     return true;
   }
 
-  const l0 = existsSync(join(cwd, "AGENTS.md")) || existsSync(join(cwd, "ANAYASA.md"));
-  const l1 = existsSync(join(cwd, "STATE_BOARD.md"));
-  const l5 = existsSync(join(cwd, "DERSLER.md"));
+  const kok = katmanKokuBul(cwd);
+  const l0 = existsSync(join(kok, "AGENTS.md")) || existsSync(join(kok, "ANAYASA.md"));
+  const l1 = existsSync(join(kok, "STATE_BOARD.md"));
+  const l5 = existsSync(join(kok, "DERSLER.md"));
   if (l0 || l1 || l5) {
     return false;
   }
   telemetriYaz(cwd, { ts: new Date().toISOString(), tip: "lint", agentId, provider, detay: "iskelet-eksik" });
   await context.paseo.agents.ref(agentId).send(
     "[paseo-verimlilik · onboarding] Bu projede L0/L1/L5 yok (rehber §9 ilk-15-dakika). " +
-    "Iskeleti kur: AGENTS.md (L0 kurallar) + STATE_BOARD.md (L1 durum) + DERSLER.md (L5 negatif bilgi). 3 dosya, 10 dakika.",
+    "Iskeleti kur: AGENTS.md (L0) + STATE_BOARD.md (L1) + DERSLER.md (L5) + plans/handoff/ + kararlar/ + raporlar/ dizinleri. 3 dosya + 3 dizin, 10 dakika.",
   );
   return true;
 }

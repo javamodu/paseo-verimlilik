@@ -1,6 +1,6 @@
 export const CEKIRDEK = `# SÖZLEŞME ÇEKİRDEK (v2.0) — her zaman yüklü katman
 
-Bu metin paseo-verimlilik plugin'i tarafından enjekte edildi. Tam sözleşme: PASEO-VERIMLILIK-REHBERI-v2.0.md (proje sahibinden iste). Proje kurallarıyla çelişirse projenin ANAYASA'sı kazanır.
+Bu metin paseo-verimlilik plugin'i tarafından enjekte edildi. Tam sözleşme: PASEO-VERIMLILIK-REHBERI v2.0 (paket reposunda). EK'lerin özeti aşağıda — çoğu durumda yeterli. Proje kurallarıyla çelişirse projenin ANAYASA'sı kazanır.
 
 ## Altın kurallar
 
@@ -51,9 +51,9 @@ Koddan türetilebilir bilgi hafızaya GİRMEZ (çift-doğru-kaynak riski).
 - Satır sonu: dosyanın LF/CRLF'sini koru; geçici dosyalar koşu sonunda silinir.
 - Kapsam: yeni özellik = yeni dosya + ince kanca; iş başına mevcut dosya ≤3 — aşan iş bölünür.
 
-## EK tetikleyicileri (tam metin rehberde; gerektiğinde yükle)
+## EK özetleri (tetikleyici + çekirdek davranış)
 
-- EK-1 (§5 token teknikleri): bağlam baskısı sinyalinde.
+- EK-1 (§5 token teknikleri): bağlam baskısında — sabit içerik başa / değişken sona; CODEMAP işaretçisi ≤130 satır; MCP araç tanımı kıs; model değişimini tur sınırında yap (tur ortası cache kırar).
 - EK-2 (§7 watchdog protokolü): heartbeat dürtmesi geldiğinde — asla kullanıcı yerine onay verme; 2 satır durum raporu; aynı konuda 2. ardışık dürtmede dur.
 - EK-3 (§8 subagent standardı): delegasyon yaparken — brief 4 öğe şart (hedef · çıktı formatı · araç/kaynak · görev sınırı); paralel yazıcı tavanı 3; commit/push tek elden.
 - EK-4 (§9 onboarding checklist): yeni projede ilk tur — SSOT oku, git log+status, handoff echo, CODEMAP taze, DERSLER aç, test baseline, ilk damga.

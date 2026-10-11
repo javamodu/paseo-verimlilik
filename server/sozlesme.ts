@@ -19,21 +19,36 @@ export interface ProjeTarama {
   handoffDizini: boolean;
 }
 
+const KATMAN_ISARETLERI = [".git", "AGENTS.md", "ANAYASA.md", "STATE_BOARD.md", "DERSLER.md"];
+
+// Alt-dizin oturumlarinda yanlis-negatifi onler: katman kokune kadar yukari yurur (maks 5 seviye).
+export function katmanKokuBul(cwd: string): string {
+  let cur = cwd;
+  for (let i = 0; i < 6; i++) {
+    if (KATMAN_ISARETLERI.some((m) => existsSync(join(cur, m)))) return cur;
+    const up = join(cur, "..");
+    if (up === cur) break;
+    cur = up;
+  }
+  return cwd;
+}
+
 export function projeyiTara(cwd: string): ProjeTarama {
-  const varMi = (ad: string) => existsSync(join(cwd, ad));
+  const kok = katmanKokuBul(cwd);
+  const varMi = (ad: string) => existsSync(join(kok, ad));
   return {
     agents: varMi("AGENTS.md"),
     anayasa: varMi("ANAYASA.md"),
-    stateBoard: varMi("STATE_BOARD.md") || existsSync(join(cwd, "plans", "STATE_BOARD.md")),
+    stateBoard: varMi("STATE_BOARD.md") || existsSync(join(kok, "plans", "STATE_BOARD.md")),
     dersler: varMi("DERSLER.md"),
     codemap: varMi("CODEMAP.md"),
-    handoffDizini: existsSync(join(cwd, "plans", "handoff")),
+    handoffDizini: existsSync(join(kok, "plans", "handoff")),
   };
 }
 
 
 export function sonHandoffDosyasi(cwd: string): string | null {
-  const dir = join(cwd, "plans", "handoff");
+  const dir = join(katmanKokuBul(cwd), "plans", "handoff");
   if (!existsSync(dir)) return null;
   try {
     const dosyalar = readdirSync(dir)
@@ -58,8 +73,9 @@ export function kuralSayisi(metin: string): number {
 
 export function projeKuralSayisi(cwd: string): number {
   let toplam = 0;
+  const kok = katmanKokuBul(cwd);
   for (const ad of ["ANAYASA.md", "AGENTS.md"]) {
-    const yol = join(cwd, ad);
+    const yol = join(kok, ad);
     if (existsSync(yol)) {
       try {
         toplam += kuralSayisi(readFileSync(yol, "utf8"));
@@ -114,7 +130,7 @@ export function enjeksiyonMetni(cwd: string, mevcutPrompt: string): EnjeksiyonSo
     satirlar.push(`- UYARI: aktif kural sayısı ~${kuralToplam} (>40) — sadeleştirme önerilir (T).`);
   }
 
-  const isaretciler = ["", "## Proje katmanları (cwd taraması: " + cwd + ")", ...satirlar].join("\n");
+  const isaretciler = ["", "## Proje katmanları (katman kökü: " + katmanKokuBul(cwd) + ")", ...satirlar].join("\n");
   let metin = cekirdek.trimEnd() + "\n" + isaretciler + "\n\n" + mevcutPrompt;
   let butceAsimi = false;
   if (Buffer.byteLength(metin, "utf8") > ENJEKSIYON_BUTCE_BYTES) {

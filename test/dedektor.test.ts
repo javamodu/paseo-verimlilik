@@ -242,6 +242,19 @@ void (async () => {
   assert(haftalikRollup(roTmp, new Date("2026-10-12T19:00:00")) === null, "ayni hafta ikinci rollup atlar (idempotent)");
   fsp.rmSync(roTmp, { recursive: true, force: true });
 
+  const { katmanKokuBul, projeyiTara } = await import("../server/sozlesme");
+  const wTmp = fsp.mkdtempSync(os.tmpdir() + "/walk-");
+  fsp.mkdirSync(wTmp + "/proje/alt/derin", { recursive: true });
+  fsp.writeFileSync(wTmp + "/proje/AGENTS.md", "kurallar");
+  assert(katmanKokuBul(wTmp + "/proje/alt/derin").replace(/\\/g, "/").endsWith("/proje"), "yukari tarama katman kokune ulasir");
+  assert(projeyiTara(wTmp + "/proje/alt/derin").agents === true, "alt dizinden AGENTS bulunur (yanlis-negatif kapandi)");
+  const wBos = wTmp + "/bos/a/b/c/d/e";
+  fsp.mkdirSync(wBos, { recursive: true });
+  assert(katmanKokuBul(wBos).replace(/\\/g, "/").endsWith("/bos/a/b/c/d/e"), "isaretsizde cwd korunur (5 seviye tavani)");
+  assert(CEKIRDEK.includes("EK özetleri") && CEKIRDEK.includes("model değişimini tur sınırında"), "EK-1 ozeti cekirdekte (hayalet referans yok)");
+  assert(Buffer.byteLength(CEKIRDEK, "utf8") < 12 * 1024, "CEKIRDEK 12KB altinda (20KB butceye proje payi kalir)");
+  fsp.rmSync(wTmp, { recursive: true, force: true });
+
   console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
   process.exit(hata === 0 ? 0 : 1);
 })();
