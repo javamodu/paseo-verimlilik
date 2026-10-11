@@ -12,6 +12,7 @@ export function TelemetriEkrani({ theme, layout, params }: PluginScreenProps) {
     queryKey: ["telemetri-ozet", cwd],
     queryFn: () => ozetCagir({ cwd }),
     enabled: cwd.length > 0,
+    refetchInterval: 10_000,
   });
   const styles = useMemo(
     () => ({
