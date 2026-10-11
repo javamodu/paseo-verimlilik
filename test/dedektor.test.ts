@@ -186,6 +186,20 @@ void (async () => {
   assert(telemetriOzetle(os.tmpdir() + "/tel-yok-" + Date.now()).anlasilmazlik === 0, "dosya yoksa anlasilmazlik 0");
   fsp.rmSync(telTmp, { recursive: true, force: true });
 
+  const { RET_DESENI, KARISIKLIK_DESENI } = await import("../server/desenler");
+  assert(RET_DESENI.test("bu olmadı"), "ret deseni: olmadi yakalanir");
+  assert(RET_DESENI.test("bu yanlış"), "ret deseni: Turkce harfle biten kelime satir sonunda yakalanir (unicode sinir)");
+  assert(RET_DESENI.test("olmamış, tekrar dene"), "ret deseni: olmamis yakalanir");
+  assert(!RET_DESENI.test("tamam, güzel iş"), "ret deseni: temiz mesaj yakalanmaz");
+  assert(!RET_DESENI.test("yanlışlar listesi"), "ret deseni: kelime-parcasi eslesmesi yok (yanlislar != yanlis)");
+  assert(KARISIKLIK_DESENI.test("bu çok karışık"), "karisiklik: karisik yakalanir");
+  assert(KARISIKLIK_DESENI.test("net değil"), "karisiklik: net degil yakalanir");
+  assert(!KARISIKLIK_DESENI.test("açık ve anlaşılır"), "karisiklik: temiz mesaj yakalanmaz");
+  assert(izinKarari("rd /s /q build") === "deny", "rd /s deny");
+  assert(izinKarari("git clean -fd") === "deny", "git clean -fd deny");
+  assert(izinKarari("git checkout -- src/a.ts") === "deny", "git checkout -- deny");
+  assert(izinKarari("git checkout main") === null, "git checkout main dokunma");
+
   console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
   process.exit(hata === 0 ? 0 : 1);
 })();

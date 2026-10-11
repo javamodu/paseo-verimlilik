@@ -14,10 +14,9 @@ import { kapsamKontrol } from "./server/kapsam";
 import { onboardingKontrol, onboardingTara } from "./server/onboarding";
 import { enjekteHandler } from "./server/enjekte";
 import { toolCallOzetleri } from "./server/inspect";
+import { KARISIKLIK_DESENI, RET_DESENI } from "./server/desenler";
 import { sonDegerlendirmeOku } from "./server/degerlendirme";
 
-const RET_DESENI = /\b(hayır|yanlış|olmamış|bozuk|bozuldu|çalışmıyor|geri al|revert|undo|wrong|broken|hatalı)\b/i;
-const KARISIKLIK_DESENI = /\b(karışık|anlaşılmadı|anlamadım|anlaşılır değil|net değil|ne demek|unclear|confusing|confused)\b/i;
 
 interface TurState {
   oncekiEditliCompleted: boolean;
