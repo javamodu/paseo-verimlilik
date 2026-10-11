@@ -1,0 +1,10 @@
+{
+    "etiket":  "v0.5.4-kilit",
+    "tarih":  "2026-10-12",
+    "commit":  "fb4978f",
+    "doctor":  null,
+    "hedefler":  null,
+    "eksenPuanlari":  null,
+    "ekOzet":  "npm test yesil (12 yeni) - typecheck temiz",
+    "not":  "karsi-review duzeltmeleri"
+}
