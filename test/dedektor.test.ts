@@ -109,6 +109,39 @@ void (async () => {
   const brefsiz = [userMsg("is"), tc("e","edit",{filePath:"a.ts"}), asstMsg("ok")];
   assert(briefTara(brefsiz).toplam === 0, "sub_agent yoksa brief taramasi sifir");
 
+
+  const { onboardingTara, onboardingKontrol, sonHandoff } = await import("../server/onboarding");
+  const os = await import("node:os");
+  const fsp = await import("node:fs");
+
+  const tmp = fsp.mkdtempSync(os.tmpdir() + "/ob-");
+  fsp.mkdirSync(tmp + "/plans/handoff", { recursive: true });
+  fsp.writeFileSync(tmp + "/plans/handoff/HANDOFF-2026-01-01-0000.md", "eski");
+  fsp.writeFileSync(tmp + "/plans/handoff/HANDOFF-2026-06-01-0000.md", "yeni");
+  assert(sonHandoff(tmp) === "HANDOFF-2026-06-01-0000.md", "sonHandoff en yeni dosyayi bulur");
+
+  onboardingTara("ob1", tmp);
+  let obGiden = 0;
+  const obCtx = { paseo: { agents: { ref: () => ({ send: async () => { obGiden++; } }) } }, signal: new AbortController().signal } as never;
+  const echoEksik = [userMsg("is"), asstMsg("ok tamam")];
+  assert(await onboardingKontrol("ob1", tmp, "codex", echoEksik, obCtx) === true && obGiden === 1, "echo eksikse ilk turda durtme");
+
+  onboardingTara("ob2", tmp);
+  obGiden = 0;
+  const echoTam = [userMsg("is"), asstMsg("Echo: kirli dosyalar yok (git status temiz), son commit abc1234, bekleyen onay: yok.")];
+  assert(await onboardingKontrol("ob2", tmp, "codex", echoTam, obCtx) === false && obGiden === 0, "echo uclusu varsa susar");
+
+  const tmpBos = fsp.mkdtempSync(os.tmpdir() + "/ob-bos-");
+  onboardingTara("ob3", tmpBos);
+  obGiden = 0;
+  assert(await onboardingKontrol("ob3", tmpBos, "codex", echoEksik, obCtx) === true && obGiden === 1, "iskelet yoksa durtme");
+  onboardingTara("ob4", tmpBos);
+  fsp.writeFileSync(tmpBos + "/AGENTS.md", "kurallar");
+  obGiden = 0;
+  assert(await onboardingKontrol("ob4", tmpBos, "codex", echoEksik, obCtx) === false && obGiden === 0, "iskelet sonradan kurulduysa susar");
+  fsp.rmSync(tmp, { recursive: true, force: true });
+  fsp.rmSync(tmpBos, { recursive: true, force: true });
+
   console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
   process.exit(hata === 0 ? 0 : 1);
 })();

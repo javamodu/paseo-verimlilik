@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { CEKIRDEK } from "./cekirdek";
 
@@ -29,6 +29,21 @@ export function projeyiTara(cwd: string): ProjeTarama {
     codemap: varMi("CODEMAP.md"),
     handoffDizini: existsSync(join(cwd, "plans", "handoff")),
   };
+}
+
+
+export function sonHandoffDosyasi(cwd: string): string | null {
+  const dir = join(cwd, "plans", "handoff");
+  if (!existsSync(dir)) return null;
+  try {
+    const dosyalar = readdirSync(dir)
+      .filter((d) => /^HANDOFF-.*\.md$/i.test(d))
+      .map((d) => ({ ad: d, mt: statSync(join(dir, d)).mtimeMs }))
+      .sort((a, b) => b.mt - a.mt);
+    return dosyalar.length > 0 ? dosyalar[0].ad : null;
+  } catch {
+    return null;
+  }
 }
 
 export function kuralSayisi(metin: string): number {
@@ -77,7 +92,12 @@ export function enjeksiyonMetni(cwd: string, mevcutPrompt: string): EnjeksiyonSo
   if (tarama.stateBoard) satirlar.push("- STATE_BOARD.md VAR → açılışta oku; biten işte damga at.");
   if (tarama.dersler) satirlar.push("- DERSLER.md VAR → açılış okuması; aynı tuzağa iki kez düşmek hatadır.");
   if (tarama.codemap) satirlar.push("- CODEMAP.md VAR → dosya ararken önce buraya bak; elle düzenlenmez.");
-  if (tarama.handoffDizini) satirlar.push("- plans/handoff/ VAR → son handoff'u bul ve echo doğrulaması yap (ÇEKİRDEK §devir).");
+  if (tarama.handoffDizini) {
+    const son = sonHandoffDosyasi(cwd);
+    satirlar.push(son
+      ? "- plans/handoff/ VAR → son devir: " + son + " — echo doğrula (ÇEKİRDEK §devir, 3 soru)."
+      : "- plans/handoff/ VAR → son handoff'u bul ve echo doğrulaması yap (ÇEKİRDEK §devir).");
+  }
   if (!tarama.agents && !tarama.anayasa && !tarama.stateBoard) {
     satirlar.push("- L0/L1/L5 bulunamadı → ilk-15-dakika protokolü (EK-4): AGENTS.md + STATE_BOARD.md + DERSLER.md iskeletini kur.");
   }

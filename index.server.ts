@@ -11,6 +11,7 @@ import { permissionKontrol } from "./server/permission";
 import { pitbullBaslat, pitbullTurBasladi, pitbullTurBitti } from "./server/pitbull";
 import { briefKontrol } from "./server/brief";
 import { kapsamKontrol } from "./server/kapsam";
+import { onboardingKontrol, onboardingTara } from "./server/onboarding";
 import { enjekteHandler } from "./server/enjekte";
 import { toolCallOzetleri } from "./server/inspect";
 
@@ -66,6 +67,16 @@ export default function contribute(server: PluginServerContext) {
   );
 
   removers.push(
+    server.on("agent.created", (event) => {
+      try {
+        onboardingTara(event.agent.id, event.agent.cwd);
+      } catch (error) {
+        console.error("[paseo-verimlilik] onboarding tarama hatasi", error);
+      }
+    }),
+  );
+
+  removers.push(
     server.on("agent.turn_started", (event, context) => {
       paseoRef = context.paseo;
       aktifAjanlar.set(event.agent.id, event.agent);
@@ -87,6 +98,7 @@ export default function contribute(server: PluginServerContext) {
           finishGateDurtme = await finishGateKontrol(agentId, event.timeline, context);
           await kapsamKontrol(agentId, event.agent.cwd, event.agent.provider, event.timeline, context);
           await briefKontrol(agentId, event.agent.cwd, event.agent.provider, event.timeline, context);
+          await onboardingKontrol(agentId, event.agent.cwd, event.agent.provider, event.timeline, context);
         }
       } catch (error) {
         console.error("[paseo-verimlilik] dedektor hatasi", error);
