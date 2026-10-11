@@ -266,6 +266,16 @@ void (async () => {
   const shellYazmaKanitsiz = [userMsg("duzelt"), tc("exec", "shell", { command: "Set-Content a.ts x" }), asstMsg("Tamam, bitti.")];
   assert(await finishGateKontrol("t4", shellYazmaKanitsiz, mockContext) === true && gonderilen === 1, "shell-yazmali + kanitsiz turda finish-gate durtur");
 
+  const { basarisizOranMesaji, _testIcinKaliteSifirla } = await import("../server/kalite");
+  const onCagri = (n: number, fail: number) => toolCallOzetleri(Array.from({ length: n }, (_, i) => tc("exec", "shell", { command: "k" + i, exitCode: i < fail ? 1 : 0 }, i < fail ? "failed" : "completed")));
+  _testIcinKaliteSifirla();
+  assert(basarisizOranMesaji("k1", onCagri(10, 2)) !== null, "kalite: 2/10 (%20) durtme uretir");
+  assert(basarisizOranMesaji("k1", onCagri(10, 3)) === null, "kalite: cooldown ikinci durtmeyi engeller");
+  _testIcinKaliteSifirla();
+  assert(basarisizOranMesaji("k2", onCagri(4, 4)) === null, "kalite: 5 cagri altinda susar (gurultu korumasi)");
+  assert(basarisizOranMesaji("k3", onCagri(10, 1)) === null, "kalite: %10 esiginde susar");
+  _testIcinKaliteSifirla();
+
   console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
   process.exit(hata === 0 ? 0 : 1);
 })();

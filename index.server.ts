@@ -17,6 +17,7 @@ import { enjekteHandler } from "./server/enjekte";
 import { toolCallOzetleri } from "./server/inspect";
 import { KARISIKLIK_DESENI, RET_DESENI } from "./server/desenler";
 import { sonDegerlendirmeOku } from "./server/degerlendirme";
+import { basarisizOranMesaji } from "./server/kalite";
 
 
 interface TurState {
@@ -109,6 +110,8 @@ export default function contribute(server: PluginServerContext) {
           await kapsamKontrol(agentId, event.agent.cwd, event.agent.provider, event.timeline, context);
           await briefKontrol(agentId, event.agent.cwd, event.agent.provider, event.timeline, context);
           await onboardingKontrol(agentId, event.agent.cwd, event.agent.provider, event.timeline, context);
+          const kaliteMesaj = basarisizOranMesaji(agentId, ozetlerTur);
+          if (kaliteMesaj) await context.paseo.agents.ref(agentId).send(kaliteMesaj);
         }
       } catch (error) {
         console.error("[paseo-verimlilik] dedektor hatasi", error);
