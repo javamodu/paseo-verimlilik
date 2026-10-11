@@ -1,0 +1,10 @@
+{
+    "etiket":  "v0.6-kilit",
+    "tarih":  "2026-10-12",
+    "commit":  "1ec2d27",
+    "doctor":  null,
+    "hedefler":  null,
+    "eksenPuanlari":  null,
+    "ekOzet":  "npm test yesil (14 yeni) - typecheck temiz",
+    "not":  "ayar.json + isaretci modu + rollup koprusu"
+}
