@@ -255,6 +255,17 @@ void (async () => {
   assert(Buffer.byteLength(CEKIRDEK, "utf8") < 12 * 1024, "CEKIRDEK 12KB altinda (20KB butceye proje payi kalir)");
   fsp.rmSync(wTmp, { recursive: true, force: true });
 
+  const { yazmaKomutuMu, editliMi } = await import("../server/inspect");
+  assert(yazmaKomutuMu('Set-Content a.txt "x"'), "yazma: Set-Content");
+  assert(yazmaKomutuMu("echo x > out.txt"), "yazma: redirect");
+  assert(yazmaKomutuMu("fs.writeFileSync cagrisi iceren komut"), "yazma: writeFileSync");
+  assert(!yazmaKomutuMu("npm test 2>&1 | Select-Object -Last 3"), "yazma: stderr redirect yanlis-pozitif degil");
+  assert(!yazmaKomutuMu("git status"), "yazma: git status degil");
+  assert(editliMi(toolCallOzetleri([tc("exec", "shell", { command: "Set-Content a.txt x" })])), "editliMi: shell yazma editli sayilir");
+  gonderilen = 0;
+  const shellYazmaKanitsiz = [userMsg("duzelt"), tc("exec", "shell", { command: "Set-Content a.ts x" }), asstMsg("Tamam, bitti.")];
+  assert(await finishGateKontrol("t4", shellYazmaKanitsiz, mockContext) === true && gonderilen === 1, "shell-yazmali + kanitsiz turda finish-gate durtur");
+
   console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
   process.exit(hata === 0 ? 0 : 1);
 })();

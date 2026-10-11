@@ -90,6 +90,18 @@ export function toolCallOzetleri(timeline: readonly AgentTimelineItem[]): ToolCa
   return out;
 }
 
+const YAZMA_DESENI = /\b(writeFileSync|appendFileSync|WriteAllText|WriteAllLines|Set-Content|Out-File|Add-Content|apply_patch|New-Item)\b/i;
+const REDIRECT_DESENI = /(?<![\d&])>{1,2}(?!&)\s*\S/;
+
+export function yazmaKomutuMu(komut: string): boolean {
+  return YAZMA_DESENI.test(komut) || REDIRECT_DESENI.test(komut);
+}
+
+// Edit tespiti: edit/write araclari + shell uzerinden yazma (apply_patch'siz ortamlar dahil).
+export function editliMi(ozetler: readonly ToolCallOzeti[]): boolean {
+  return ozetler.some((o) => o.detailType === "edit" || o.detailType === "write" || (o.command !== undefined && yazmaKomutuMu(o.command)));
+}
+
 export function sonKullaniciMesajiIndex(timeline: readonly AgentTimelineItem[]): number {
   for (let i = timeline.length - 1; i >= 0; i--) {
     if (timeline[i].type === "user_message") {

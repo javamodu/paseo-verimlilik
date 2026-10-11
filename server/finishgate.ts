@@ -1,6 +1,6 @@
 import type { PluginHookContext } from "@getpaseo/plugin/server";
 import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
-import { latestOutputText, sonKullaniciMesajiIndex, toolCallOzetleri } from "./inspect";
+import { editliMi, latestOutputText, sonKullaniciMesajiIndex, toolCallOzetleri } from "./inspect";
 
 const TAMAMLANMA_DESENI = /\b(tamam(landı|landi)?|bitti|hazır|hazir|geçti|gecti|başarılı|basarili|passed|done|complet(ed|e)|yeşil|yesil)\b/i;
 const DOGRULAMA_DESENI = /(test|lint|typecheck|tsc|build|saglik|verify|check|doctor|pytest|vitest|jest|mocha|cargo test|go test)/i;
@@ -20,7 +20,7 @@ export async function finishGateKontrol(
   }
   const sonMesaj = sonKullaniciMesajiIndex(timeline);
   const cagri = toolCallOzetleri(sonMesaj >= 0 ? timeline.slice(sonMesaj + 1) : timeline);
-  const isTurundaEditVar = cagri.some((c) => c.detailType === "edit" || c.detailType === "write");
+  const isTurundaEditVar = editliMi(cagri);
   if (!isTurundaEditVar) {
     return false;
   }
