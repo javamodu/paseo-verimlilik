@@ -14,6 +14,9 @@ Ajan verimlilik sözleşmesini (PASEO-VERIMLILIK-REHBERI ÇEKİRDEK v2.0) her ye
 - **Kapsam lint:** tur başına 3'ten fazla biricik dosya düzenlenirse kapsam dürtmesi (cooldown'lu).
 - **Brief lint:** zayıf delegasyon brief'lerini (4+2 öğe-anahtarı eksik) geriye dönük tespit edip dürtür.
 - **Onboarding + echo kapısı:** L0/L1/L5 yoksa ilk-15-dakika iskeleti dürtmesi; handoff varsa ilk turda echo üçlüsü doğrulaması (eksikse tek dürtme).
+- **Yapılandırma (repo başına):** `.verimlilik/ayar.json` — `pitbullYaziciDk` (vars. 15), `pitbullOkuyucuDk` (vars. 20), `kapsamEsik` (vars. 3), `enjeksiyonMod` (`tam`/`isaretci`/`kapali`). Sınır dışı değerler reddedilir, bozuk dosya varsayılana düşer.
+- **İşaretçi modu:** kural sayısı >80 blokunda sessiz geçiş yerine 4 satırlık sözleşme özeti enjekte edilir (`kapali` modda tamamen susar); 20 KB bütçe aşımında enjeksiyona not satırı düşülür.
+- **Haftalık rollup:** her tur bitiminde kontrol — ISO haftası başına bir kez `.verimlilik/telemetri.jsonl` → `raporlar/telemetri-haftalik/<YYYY-Www>.md` mekanik özet (LLM'siz, idempotent).
 - **Kabul / anlaşılmazlık sinyali:** edit'li tamamlanmış turdan sonra ret desenli kullanıcı mesajı önceki turu reddedilmiş sayar; karışıklık deseni (karışık/anlaşılmadı/net değil...) ayrı sayaca düşer (T — desen tabanlı yaklaşık ölçüm; Unicode-sınır güvenli).
 
 ## Neyi okur, neye müdahale eder
