@@ -220,6 +220,28 @@ void (async () => {
   assert(ism.includes("103") && ism.includes("bloklandı"), "isaretci metni kural sayisini ve blok sebebini tasir");
   assert(ism.split("\n").length === 4 && ism.length < 600, "isaretci 4 satir ve kucuk (butce dostu)");
 
+  const { isoHafta, haftalikRollup } = await import("../server/rollup");
+  assert(isoHafta(new Date("2026-10-12T12:00:00")) === "2026-W42", "ISO hafta: 2026-10-12 = W42");
+  const roTmp = fsp.mkdtempSync(os.tmpdir() + "/roll-");
+  assert(haftalikRollup(roTmp) === null, "telemetri yoksa rollup uretmez");
+  fsp.mkdirSync(roTmp + "/.verimlilik", { recursive: true });
+  const roKayitlar = [
+    { ts: "2026-10-12T10:00:00Z", tip: "tur", agentId: "a", provider: "p", turSn: 100, loopDurtme: true, detay: "in=1000 cacheHitPct=80" },
+    { ts: "2026-10-12T10:05:00Z", tip: "tur", agentId: "a", provider: "p", turSn: 200, detay: "in=1000 cacheHitPct=100" },
+    { ts: "2026-10-12T10:06:00Z", tip: "kabul", agentId: "a", provider: "p", kabul: true },
+    { ts: "2026-10-12T10:07:00Z", tip: "karisiklik", agentId: "a", provider: "p" },
+  ];
+  fsp.writeFileSync(roTmp + "/.verimlilik/telemetri.jsonl", roKayitlar.map((k) => JSON.stringify(k)).join("\n") + "\n");
+  const roDosya = haftalikRollup(roTmp, new Date("2026-10-12T18:00:00"));
+  assert(roDosya !== null && fsp.existsSync(roDosya), "rollup dosyasi uretilir");
+  const roMd = fsp.readFileSync(roDosya!, "utf8");
+  assert(roMd.includes("Tur: 2") && roMd.includes("150sn"), "rollup tur sayisi ve ortalama dogru");
+  assert(roMd.includes("%100 (1/1)"), "rollup kabul orani dogru");
+    assert(roMd.includes("loop 1") && roMd.includes("Anlaşılmazlık: 1"), "rollup durtmeler dogru");
+  assert(roMd.includes("%90"), "rollup cache-hit ortalamasi dogru (80+100)/2");
+  assert(haftalikRollup(roTmp, new Date("2026-10-12T19:00:00")) === null, "ayni hafta ikinci rollup atlar (idempotent)");
+  fsp.rmSync(roTmp, { recursive: true, force: true });
+
   console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
   process.exit(hata === 0 ? 0 : 1);
 })();

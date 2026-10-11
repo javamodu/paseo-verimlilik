@@ -3,6 +3,7 @@ import { join } from "node:path";
 import type { PluginHookAgent, PluginTurnOutcome } from "@getpaseo/plugin/server";
 import type { AgentTimelineItem, AgentUsage } from "@getpaseo/protocol/agent-types";
 import { toolCallOzetleri } from "./inspect";
+import { haftalikRollup } from "./rollup";
 
 export interface TelemetriKayit {
   ts: string;
@@ -102,6 +103,11 @@ export function turKaydet(input: {
     finishGateDurtme: input.finishGateDurtme || undefined,
     detay: detayParca.length > 0 ? detayParca.join(" ") : undefined,
   });
+  try {
+    haftalikRollup(input.agent.cwd);
+  } catch (error) {
+    console.error("[paseo-verimlilik] rollup hatasi", error);
+  }
 }
 
 export function kabulKaydet(cwd: string, agentId: string, provider: string, kabul: boolean, sinyal: string): void {
