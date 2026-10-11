@@ -38,10 +38,14 @@ export async function finishGateKontrol(
     return false;
   }
   durum.set(agentId, sayi + 1);
+  const hicShellYok = !cagri.some((c) => c.command !== undefined);
+  const mesaj = hicShellYok
+    ? "[paseo-verimlilik · finish-gate] Edit'li turu hic dogrulama komutu kosturmadan 'bitti' diye kapattin (Replit dersi: metin pass degildir). " +
+      "Test/lint/typecheck kostur, exit-code 0'i raporla; kosturamiyorsan nedenini yaz."
+    : "[paseo-verimlilik · finish-gate] 'Bitti' iddian dis sinyal kaniti tasimiyor — kostulan komutlar arasinda exit-0 dogrulama yok. " +
+      "Test/lint/dogrulama komutunu kostur ve exit-code 0'i raporla; kosturamiyorsan nedenini yaz.";
   await context.paseo.agents.ref(agentId).send(
-    "[paseo-verimlilik · finish-gate] 'Bitti' iddian dis sinyal kaniti tasimiyor — metin pass degildir (Replit dersi). " +
-    "Test/lint/dogrulama komutunu kostur ve exit-code 0'i raporla; kosturamiyorsan nedenini yaz. " +
-    "Bu 2. ardisik uyarida kapı susar ve insan kapisi acilir.",
+    mesaj + " Bu 2. ardisik uyarida kapi susar ve insan kapisi acilir.",
   );
   return true;
 }

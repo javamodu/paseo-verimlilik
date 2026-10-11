@@ -31,6 +31,7 @@ export interface ToolCallOzeti {
   name: string;
   hash: string;
   detailType: string;
+  filePath?: string;
   exitCode?: number | null;
   command?: string;
   status: string;
@@ -61,12 +62,14 @@ export function toolCallOzetleri(timeline: readonly AgentTimelineItem[]): ToolCa
     let anahtar: unknown = null;
     let exitCode: number | null | undefined;
     let command: string | undefined;
+    let filePath: string | undefined;
     if (detailType === "shell") {
       anahtar = { command: detail.command };
       exitCode = typeof detail.exitCode === "number" ? detail.exitCode : null;
       command = typeof detail.command === "string" ? detail.command : undefined;
     } else if (detailType === "read" || detailType === "edit" || detailType === "write") {
       anahtar = { filePath: detail.filePath, offset: detail.offset };
+      filePath = typeof detail.filePath === "string" ? detail.filePath : undefined;
     } else if (detailType === "search") {
       anahtar = { query: detail.query, mode: detail.mode };
     } else if (detailType === "fetch") {
@@ -78,6 +81,7 @@ export function toolCallOzetleri(timeline: readonly AgentTimelineItem[]): ToolCa
       name: item.name,
       hash: item.name + "|" + detailType + "|" + stableStringify(anahtar),
       detailType,
+      filePath,
       exitCode,
       command,
       status: item.status,

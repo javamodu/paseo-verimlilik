@@ -59,7 +59,7 @@ void (async () => {
   assert(await finishGateKontrol("t3", editliKanitli, mockContext) === false && gonderilen === 0, "editli + exit-0 testli turda finish-gate susar");
 
   const { izinKarari } = await import("../server/permission");
-  const { pitbullTurBasladi, pitbullTurBitti, pitbullTara } = await import("../server/pitbull");
+  const { pitbullTurBasladi, pitbullTurBitti, pitbullTara, _testIcinDurumVer } = await import("../server/pitbull");
 
   assert(izinKarari("git status") === "allow", "git status allow");
   assert(izinKarari("rg --files") === "allow", "rg allow");
@@ -81,6 +81,7 @@ void (async () => {
   let r1 = pitbullTara(harita, gonder);
   assert(r1.dirtulen === 0 && giden === 0, "yeni tur: pitbull susar");
   pitbullTurBasladi("pb1", Date.now() - 11 * 60_000);
+  _testIcinDurumVer("pb1")!.sonDurtme = 0;
   let r2 = pitbullTara(harita, gonder);
   assert(r2.dirtulen === 1 && giden === 1, "11dk stall: pitbull durtur");
   let r3 = pitbullTara(harita, gonder);
@@ -88,6 +89,25 @@ void (async () => {
   pitbullTurBitti("pb1");
   let r4 = pitbullTara(harita, gonder);
   assert(r4.dirtulen === 0, "tur bitince pitbull sifirlanir");
+
+
+  const { kapsamSay } = await import("../server/kapsam");
+  const { briefTara } = await import("../server/brief");
+
+  const kapsamli = [userMsg("is"),
+    tc("e","edit",{filePath:"a.ts"}), tc("e","edit",{filePath:"b.ts"}),
+    tc("e","write",{filePath:"c.ts"}), tc("e","edit",{filePath:"d.ts"}),
+    asstMsg("bitti")];
+  assert(kapsamSay(kapsamli).dosyalar.length === 4, "kapsam: 4 biricik dosya sayilir");
+  const kapsamTekrar = [userMsg("is"), tc("e","edit",{filePath:"a.ts"}), tc("e","edit",{filePath:"a.ts"}), asstMsg("ok")];
+  assert(kapsamSay(kapsamTekrar).dosyalar.length === 1, "kapsam: ayni dosya tekrarlari birlesir");
+
+  const zayifBrief = [userMsg("delege et"), tc("s","sub_agent",{description:"kisa"}), asstMsg("tamam")];
+  assert(briefTara(zayifBrief).zayif === 1, "kisa+madde-siz brief zayif sayilir");
+  const iyiBrief = [userMsg("delege et"), tc("s","sub_agent",{description: "- Hedef: X yap\n- Cikti: Y formatinda\n- Arac: Z\n- Sinir: W yapma"}), asstMsg("tamam")];
+  assert(briefTara(iyiBrief).zayif === 0, "uzun+maddeli brief gecer");
+  const brefsiz = [userMsg("is"), tc("e","edit",{filePath:"a.ts"}), asstMsg("ok")];
+  assert(briefTara(brefsiz).toplam === 0, "sub_agent yoksa brief taramasi sifir");
 
   console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
   process.exit(hata === 0 ? 0 : 1);
