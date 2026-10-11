@@ -3,7 +3,8 @@ import type { PluginHookAgent } from "@getpaseo/plugin/server";
 import type { PaseoApi } from "@getpaseo/client";
 import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
 import { sozlesmeEnjekte, telemetriOzet, sonDegerlendirme } from "./shared/contracts";
-import { enjeksiyonMetni } from "./server/sozlesme";
+import { enjeksiyonMetni, isaretciMetni } from "./server/sozlesme";
+import { ayarOku } from "./server/ayar";
 import { kabulKaydet, karisiklikKaydet, lintKaydet, telemetriOzetle, turBaslat, turKaydet } from "./server/telemetry";
 import { loopKontrol } from "./server/loopguard";
 import { finishGateKontrol } from "./server/finishgate";
@@ -61,6 +62,11 @@ export default function contribute(server: PluginServerContext) {
         not: sonuc.kuralBlok ? "kural-blok" : sonuc.butceAsimi ? "butce-asimi" : undefined,
       });
       if (sonuc.kuralBlok) {
+        const mod = ayarOku(request.config.cwd).enjeksiyonMod;
+        if (mod !== "kapali") {
+          const mevcut = request.config.systemPrompt ?? "";
+          return { ...request, config: { ...request.config, systemPrompt: isaretciMetni(sonuc.kuralToplam) + "\n\n" + mevcut } };
+        }
         console.error(`[paseo-verimlilik] enjeksiyon engellendi: aktif kural ~${sonuc.kuralToplam} (>80)`);
         return undefined;
       }

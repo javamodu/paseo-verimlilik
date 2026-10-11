@@ -79,6 +79,15 @@ export interface EnjeksiyonSonuc {
   butceAsimi: boolean;
 }
 
+export function isaretciMetni(kuralToplam: number): string {
+  return [
+    "[paseo-verimlilik · sözleşme işaretçisi]",
+    "Aktif kural sayısı ~" + kuralToplam + " (>80) — tam ÇEKİRDEK enjeksiyonu bloklandı (bağlam hijyeni).",
+    "Özet: okumadan yazma · kanıt = kalıcı kayıt · kapanış = test/lint yeşil · devir töreni (handoff + echo) · dürtmede 2 satır durum.",
+    "Tam sözleşme: PASEO-VERIMLILIK-REHBERI v2.0 (paket reposu).",
+  ].join("\n");
+}
+
 export function enjeksiyonMetni(cwd: string, mevcutPrompt: string): EnjeksiyonSonuc {
   const cekirdek = cekirdekYukle();
   const tarama = projeyiTara(cwd);
@@ -110,7 +119,7 @@ export function enjeksiyonMetni(cwd: string, mevcutPrompt: string): EnjeksiyonSo
   let butceAsimi = false;
   if (Buffer.byteLength(metin, "utf8") > ENJEKSIYON_BUTCE_BYTES) {
     butceAsimi = true;
-    metin = cekirdek.trimEnd() + "\n\n" + mevcutPrompt;
+    metin = cekirdek.trimEnd() + "\n[not: 20KB bütçe aşımı — proje işaretçileri kırpıldı]\n\n" + mevcutPrompt;
   }
   return { metin, kuralToplam, kuralBlok, kuralSari, butceAsimi };
 }

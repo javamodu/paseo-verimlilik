@@ -215,6 +215,11 @@ void (async () => {
   assert(ay2.pitbullYaziciDk === 15 && ay2.enjeksiyonMod === "tam", "sinir-disi degerler reddedilir");
   fsp.rmSync(ayTmp, { recursive: true, force: true });
 
+  const { isaretciMetni } = await import("../server/sozlesme");
+  const ism = isaretciMetni(103);
+  assert(ism.includes("103") && ism.includes("bloklandı"), "isaretci metni kural sayisini ve blok sebebini tasir");
+  assert(ism.split("\n").length === 4 && ism.length < 600, "isaretci 4 satir ve kucuk (butce dostu)");
+
   console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
   process.exit(hata === 0 ? 0 : 1);
 })();
