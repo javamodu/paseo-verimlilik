@@ -20,6 +20,10 @@ export async function finishGateKontrol(
   }
   const sonMesaj = sonKullaniciMesajiIndex(timeline);
   const cagri = toolCallOzetleri(sonMesaj >= 0 ? timeline.slice(sonMesaj + 1) : timeline);
+  const isTurundaEditVar = cagri.some((c) => c.detailType === "edit" || c.detailType === "write");
+  if (!isTurundaEditVar) {
+    return false;
+  }
   const kanit = cagri.some(
     (c) => c.command !== undefined && DOGRULAMA_DESENI.test(c.command) && c.exitCode === 0,
   );

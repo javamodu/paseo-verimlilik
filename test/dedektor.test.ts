@@ -38,5 +38,25 @@ const uzunB = "Get-Content " + "B".repeat(300);
 const uzunlar = toolCallOzetleri([tc("exec", "shell", { command: uzunA }), tc("exec", "shell", { command: uzunB }), tc("exec", "shell", { command: uzunA })]);
 assert(uzunlar[0].hash !== uzunlar[1].hash, "uzun komutlar birbirinden ayrilir (200+ char kirpma)");
 assert(uzunlar[0].hash === uzunlar[2].hash, "ayni uzun komut ayni hash");
-console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
-process.exit(hata === 0 ? 0 : 1);
+
+import { finishGateKontrol } from "../server/finishgate";
+let gonderilen = 0;
+const mockContext = { paseo: { agents: { ref: () => ({ send: async () => { gonderilen++; } }) } }, signal: new AbortController().signal } as never;
+const userMsg = (t: string) => ({ type: "user_message", text: t }) as never;
+const asstMsg = (t: string) => ({ type: "assistant_message", text: t }) as never;
+
+void (async () => {
+  gonderilen = 0;
+  const saltMetin = [userMsg("hazir mi?"), asstMsg("Evet, tamamlandi.")];
+  assert(await finishGateKontrol("t1", saltMetin, mockContext) === false && gonderilen === 0, "salt-metin turda finish-gate susar");
+  
+  gonderilen = 0;
+  const editliKanitsiz = [userMsg("duzelt"), tc("edit", "edit", { filePath: "a.ts" }), asstMsg("Tamam, bitti.")];
+  assert(await finishGateKontrol("t2", editliKanitsiz, mockContext) === true && gonderilen === 1, "editli + kanitsiz turda finish-gate durtur");
+  
+  gonderilen = 0;
+  const editliKanitli = [userMsg("duzelt"), tc("edit", "edit", { filePath: "a.ts" }), tc("exec", "shell", { command: "npm test", exitCode: 0 }), asstMsg("Bitti, testler gecti.")];
+  assert(await finishGateKontrol("t3", editliKanitli, mockContext) === false && gonderilen === 0, "editli + exit-0 testli turda finish-gate susar");
+  console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
+  process.exit(hata === 0 ? 0 : 1);
+})();
