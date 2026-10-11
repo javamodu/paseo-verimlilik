@@ -92,7 +92,9 @@ export default function contribute(server: PluginServerContext) {
     server.on("agent.turn_ended", async (event, context) => {
       paseoRef = context.paseo;
       const agentId = event.agent.id;
-      pitbullTurBitti(agentId);
+      const ozetlerTur = toolCallOzetleri(event.timeline);
+      const editliTur = ozetlerTur.some((o) => o.detailType === "edit" || o.detailType === "write");
+      pitbullTurBitti(agentId, editliTur);
       let loopDurtme = false;
       let finishGateDurtme = false;
       try {
@@ -118,8 +120,7 @@ export default function contribute(server: PluginServerContext) {
         if (state.oncekiCompleted && mesajlar.length >= 2 && KARISIKLIK_DESENI.test(buTurunPromptu)) {
           karisiklikKaydet(event.agent.cwd, agentId, event.agent.provider, "onceki-tur-prompt-deseni(T)");
         }
-        const ozetler = toolCallOzetleri(event.timeline);
-        const editli = ozetler.some((o) => o.detailType === "edit" || o.detailType === "write");
+        const editli = editliTur;
         state.oncekiCompleted = event.outcome.kind === "completed";
         state.oncekiEditliCompleted = event.outcome.kind === "completed" && editli;
         turDurumu.set(agentId, state);

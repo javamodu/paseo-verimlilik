@@ -83,12 +83,28 @@ void (async () => {
   pitbullTurBasladi("pb1", Date.now() - 11 * 60_000);
   _testIcinDurumVer("pb1")!.sonDurtme = 0;
   let r2 = pitbullTara(harita, gonder);
-  assert(r2.dirtulen === 1 && giden === 1, "11dk stall: pitbull durtur");
+  assert(r2.dirtulen === 0 && giden === 0, "11dk okuyucu stall: pitbull susar (okuyucu esigi 20dk)");
+  pitbullTurBasladi("pb1", Date.now() - 21 * 60_000);
+  let r2b = pitbullTara(harita, gonder);
+  assert(r2b.dirtulen === 1 && giden === 1, "21dk okuyucu stall: pitbull durtur");
   let r3 = pitbullTara(harita, gonder);
   assert(r3.dirtulen === 0 && giden === 1, "cooldown icinde ikinci durtme yok");
   pitbullTurBitti("pb1");
   let r4 = pitbullTara(harita, gonder);
   assert(r4.dirtulen === 0, "tur bitince pitbull sifirlanir");
+
+  const aj2 = { id: "pb2", cwd: "D:/Vibecode/paseo-verimlilik", provider: "codex" } as never;
+  harita.set("pb2", aj2);
+  pitbullTurBasladi("pb2", Date.now() - 30 * 60_000);
+  pitbullTurBitti("pb2", true);
+  pitbullTurBasladi("pb2", Date.now() - 16 * 60_000);
+  _testIcinDurumVer("pb2")!.sonDurtme = 0;
+  let sonMetin = "";
+  const gonder2 = async (_a: unknown, m: string) => { giden++; sonMetin = m; };
+  let r5 = pitbullTara(harita, gonder2);
+  assert(r5.dirtulen === 1, "16dk yazici stall: pitbull durtur (yazici esigi 15dk)");
+  assert(sonMetin.includes("yazım kümesi sessiz"), "yazici durtmesi yazim-kumesi sinifini bildirir");
+  harita.delete("pb2");
 
 
   const { kapsamSay } = await import("../server/kapsam");
