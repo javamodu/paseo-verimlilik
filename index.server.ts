@@ -1,10 +1,14 @@
 import type { PluginServerContext } from "@getpaseo/plugin/server";
+import type { PluginHookAgent } from "@getpaseo/plugin/server";
+import type { PaseoApi } from "@getpaseo/client";
 import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
 import { sozlesmeEnjekte, telemetriOzet } from "./shared/contracts";
 import { enjeksiyonMetni } from "./server/sozlesme";
 import { kabulKaydet, lintKaydet, telemetriOzetle, turBaslat, turKaydet } from "./server/telemetry";
 import { loopKontrol } from "./server/loopguard";
 import { finishGateKontrol } from "./server/finishgate";
+import { permissionKontrol } from "./server/permission";
+import { pitbullBaslat, pitbullTurBasladi, pitbullTurBitti } from "./server/pitbull";
 import { enjekteHandler } from "./server/enjekte";
 import { toolCallOzetleri } from "./server/inspect";
 
@@ -15,6 +19,7 @@ interface TurState {
 }
 
 const turDurumu = new Map<string, TurState>();
+let paseoRef: PaseoApi | null = null;
 
 function kullaniciMesajlari(timeline: readonly AgentTimelineItem[]): string[] {
   return timeline.filter((i) => i.type === "user_message").map((i) => (i as { text: string }).text);
@@ -22,6 +27,14 @@ function kullaniciMesajlari(timeline: readonly AgentTimelineItem[]): string[] {
 
 export default function contribute(server: PluginServerContext) {
   const removers: Array<() => void> = [];
+  const aktifAjanlar = new Map<string, PluginHookAgent>();
+
+  removers.push(
+    pitbullBaslat(aktifAjanlar, async (agent, mesaj) => {
+      if (!paseoRef) return;
+      await paseoRef.agents.ref(agent.id).send(mesaj);
+    }),
+  );
 
   removers.push(
     server.before("agent.create", ({ request }) => {
@@ -51,14 +64,19 @@ export default function contribute(server: PluginServerContext) {
   );
 
   removers.push(
-    server.on("agent.turn_started", (event) => {
-      turBaslat(event.agent.id);
+    server.on("agent.turn_started", (event, context) => {
+      paseoRef = context.paseo;
+      aktifAjanlar.set(event.agent.id, event.agent);
+      turBaslat(event.agent.id, event.agent.cwd);
+      pitbullTurBasladi(event.agent.id);
     }),
   );
 
   removers.push(
     server.on("agent.turn_ended", async (event, context) => {
+      paseoRef = context.paseo;
       const agentId = event.agent.id;
+      pitbullTurBitti(agentId);
       let loopDurtme = false;
       let finishGateDurtme = false;
       try {
@@ -102,6 +120,23 @@ export default function contribute(server: PluginServerContext) {
         loopDurtme,
         finishGateDurtme,
       });
+    }),
+  );
+
+  removers.push(
+    server.on("agent.permission_requested", async (event, context) => {
+      paseoRef = context.paseo;
+      try {
+        await permissionKontrol(event.agent, event.request, context);
+      } catch (error) {
+        console.error("[paseo-verimlilik] permission hatasi", error);
+      }
+    }),
+  );
+
+  removers.push(
+    server.on("agent.closed", (event) => {
+      aktifAjanlar.delete(event.agent.id);
     }),
   );
 

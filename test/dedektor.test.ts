@@ -57,6 +57,38 @@ void (async () => {
   gonderilen = 0;
   const editliKanitli = [userMsg("duzelt"), tc("edit", "edit", { filePath: "a.ts" }), tc("exec", "shell", { command: "npm test", exitCode: 0 }), asstMsg("Bitti, testler gecti.")];
   assert(await finishGateKontrol("t3", editliKanitli, mockContext) === false && gonderilen === 0, "editli + exit-0 testli turda finish-gate susar");
+
+  const { izinKarari } = await import("../server/permission");
+  const { pitbullTurBasladi, pitbullTurBitti, pitbullTara } = await import("../server/pitbull");
+
+  assert(izinKarari("git status") === "allow", "git status allow");
+  assert(izinKarari("rg --files") === "allow", "rg allow");
+  assert(izinKarari("Get-Content README.md") === "allow", "Get-Content allow");
+  assert(izinKarari("rm -rf node_modules") === "deny", "rm -rf deny");
+  assert(izinKarari("git push --force origin main") === "deny", "force push deny");
+  assert(izinKarari("git reset --hard HEAD~1") === "deny", "reset --hard deny");
+  assert(izinKarari("git status && rm -rf /") === "deny", "zincirde tehlike yine de deny");
+  assert(izinKarari("git status && git log") === null, "zincir allow edilmez");
+  assert(izinKarari("echo x > dosya.txt") === null, "redirect bypass engellenir");
+  assert(izinKarari("npm install") === null, "npm install dokunma (kullaniciya)");
+  assert(izinKarari(null) === null, "shell-disina dokunma");
+
+  const aj = { id: "pb1", cwd: "D:/Vibecode/paseo-verimlilik", provider: "codex" } as never;
+  const harita = new Map<string, never>([["pb1", aj]]);
+  let giden = 0;
+  const gonder = async () => { giden++; };
+  pitbullTurBasladi("pb1");
+  let r1 = pitbullTara(harita, gonder);
+  assert(r1.dirtulen === 0 && giden === 0, "yeni tur: pitbull susar");
+  pitbullTurBasladi("pb1", Date.now() - 11 * 60_000);
+  let r2 = pitbullTara(harita, gonder);
+  assert(r2.dirtulen === 1 && giden === 1, "11dk stall: pitbull durtur");
+  let r3 = pitbullTara(harita, gonder);
+  assert(r3.dirtulen === 0 && giden === 1, "cooldown icinde ikinci durtme yok");
+  pitbullTurBitti("pb1");
+  let r4 = pitbullTara(harita, gonder);
+  assert(r4.dirtulen === 0, "tur bitince pitbull sifirlanir");
+
   console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
   process.exit(hata === 0 ? 0 : 1);
 })();

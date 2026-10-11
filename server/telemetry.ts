@@ -12,6 +12,7 @@ export interface TelemetriKayit {
   turnId?: string | null;
   outcome?: PluginTurnOutcome["kind"];
   turSayisi?: number;
+  turSn?: number;
   toolCalls?: number;
   editCalls?: number;
   shellCalls?: number;
@@ -26,6 +27,9 @@ export interface TelemetriKayit {
 }
 
 const turSayaclari = new Map<string, number>();
+const turBaslangiclari = new Map<string, number>();
+let aktifTur = 0;
+export const PARALEL_TAVAN = 3;
 
 export function telemetriDosyasi(cwd: string): string {
   return join(cwd, ".verimlilik", "telemetri.jsonl");
@@ -41,7 +45,18 @@ export function telemetriYaz(cwd: string, kayit: TelemetriKayit): void {
   }
 }
 
-export function turBaslat(agentId: string): number {
+export function turBaslat(agentId: string, cwd?: string): number {
+  turBaslangiclari.set(agentId, Date.now());
+  aktifTur++;
+  if (cwd && aktifTur > PARALEL_TAVAN) {
+    telemetriYaz(cwd, {
+      ts: new Date().toISOString(),
+      tip: "lint",
+      agentId,
+      provider: "-",
+      detay: "paralellik-asimi aktifTur=" + aktifTur,
+    });
+  }
   const sayi = (turSayaclari.get(agentId) ?? 0) + 1;
   turSayaclari.set(agentId, sayi);
   return sayi;
@@ -69,6 +84,7 @@ export function turKaydet(input: {
     if (hit !== null) detayParca.push(`cacheHitPct=${hit}`);
     if (usage.outputTokens) detayParca.push(`out=${usage.outputTokens}`);
   }
+  aktifTur = Math.max(0, aktifTur - 1);
   telemetriYaz(input.agent.cwd, {
     ts: new Date().toISOString(),
     tip: "tur",
@@ -77,6 +93,7 @@ export function turKaydet(input: {
     turnId: input.turnId,
     outcome: input.outcome.kind,
     turSayisi: turSayaclari.get(input.agent.id) ?? 1,
+    turSn: (() => { const t0 = turBaslangiclari.get(input.agent.id); return t0 ? Math.round((Date.now() - t0) / 1000) : undefined; })(),
     toolCalls: ozetler.length,
     shellCalls: shell.length,
     editCalls: edits.length,
