@@ -6,6 +6,7 @@ export interface VerimlilikAyar {
   pitbullOkuyucuDk: number;
   kapsamEsik: number;
   enjeksiyonMod: "tam" | "isaretci" | "kapali";
+  bekciKapali: boolean;
 }
 
 export const VARSAYILAN_AYAR: VerimlilikAyar = {
@@ -13,6 +14,7 @@ export const VARSAYILAN_AYAR: VerimlilikAyar = {
   pitbullOkuyucuDk: 20,
   kapsamEsik: 3,
   enjeksiyonMod: "tam",
+  bekciKapali: false,
 };
 
 const cache = new Map<string, { mt: number; boyut: number; ayar: VerimlilikAyar }>();
@@ -35,6 +37,7 @@ export function ayarOku(cwd: string): VerimlilikAyar {
       pitbullOkuyucuDk: sayiAl(ham.pitbullOkuyucuDk, 1, 240, VARSAYILAN_AYAR.pitbullOkuyucuDk),
       kapsamEsik: sayiAl(ham.kapsamEsik, 1, 50, VARSAYILAN_AYAR.kapsamEsik),
       enjeksiyonMod: mod === "isaretci" || mod === "kapali" ? mod : "tam",
+      bekciKapali: ham.bekciKapali === true,
     };
     cache.set(cwd, { mt: st.mtimeMs, boyut: st.size, ayar });
     return ayar;

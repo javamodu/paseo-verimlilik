@@ -9,6 +9,8 @@ import { loopKontrol } from "./server/loopguard";
 import { finishGateKontrol } from "./server/finishgate";
 import { permissionKontrol } from "./server/permission";
 import { pitbullBaslat, pitbullTurBasladi, pitbullTurBitti } from "./server/pitbull";
+import { bekciBaslat } from "./server/bekci";
+import { katmanKokuBul } from "./server/sozlesme";
 import { briefKontrol } from "./server/brief";
 import { kapsamKontrol } from "./server/kapsam";
 import { onboardingKontrol, onboardingTara } from "./server/onboarding";
@@ -34,12 +36,19 @@ function kullaniciMesajlari(timeline: readonly AgentTimelineItem[]): string[] {
 export default function contribute(server: PluginServerContext) {
   const removers: Array<() => void> = [];
   const aktifAjanlar = new Map<string, PluginHookAgent>();
+  const aktifTurler = new Map<string, string>();
 
+  const gonderAjana = async (agent: PluginHookAgent, mesaj: string) => {
+    if (!paseoRef) return;
+    await paseoRef.agents.ref(agent.id).send(mesaj);
+  };
+  removers.push(pitbullBaslat(aktifAjanlar, gonderAjana));
   removers.push(
-    pitbullBaslat(aktifAjanlar, async (agent, mesaj) => {
-      if (!paseoRef) return;
-      await paseoRef.agents.ref(agent.id).send(mesaj);
-    }),
+    bekciBaslat(
+      aktifAjanlar,
+      (repoKok) => [...aktifTurler.values()].some((c) => { try { return katmanKokuBul(c) === repoKok; } catch { return false; } }),
+      gonderAjana,
+    ),
   );
 
   removers.push(
@@ -85,6 +94,7 @@ export default function contribute(server: PluginServerContext) {
       aktifAjanlar.set(event.agent.id, event.agent);
       turBaslat(event.agent.id, event.agent.cwd);
       pitbullTurBasladi(event.agent.id);
+      aktifTurler.set(event.agent.id, event.agent.cwd);
     }),
   );
 
@@ -92,6 +102,7 @@ export default function contribute(server: PluginServerContext) {
     server.on("agent.turn_ended", async (event, context) => {
       paseoRef = context.paseo;
       const agentId = event.agent.id;
+      aktifTurler.delete(agentId);
       const ozetlerTur = turCagrilari(event.timeline);
       const editliTur = editliMi(ozetlerTur);
       pitbullTurBitti(agentId, editliTur);
@@ -163,6 +174,7 @@ export default function contribute(server: PluginServerContext) {
   removers.push(
     server.on("agent.closed", (event) => {
       aktifAjanlar.delete(event.agent.id);
+      aktifTurler.delete(event.agent.id);
     }),
   );
 

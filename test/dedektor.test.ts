@@ -395,6 +395,71 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
   } catch { console.log("uyari: git tag okunamadi, drift bekçisi atlandi"); }
   fsp.rmSync(surTmp, { recursive: true, force: true });
 
+  // v0.9: bekci (K-0013) — kopru + agnostik kontroller, dedupe, coder-aktif korumasi
+  const { bekciKontrol, bekciTara } = await import("../server/bekci");
+  const bTmp = fsp.mkdtempSync(os.tmpdir() + "/bek-");
+  fsp.mkdirSync(bTmp + "/scripts", { recursive: true });
+  fsp.writeFileSync(bTmp + "/scripts/saglik.ps1", "stub");
+  fsp.writeFileSync(bTmp + "/scripts/zincir-kontrol.ps1", "stub");
+  fsp.writeFileSync(bTmp + "/STATE_BOARD.md", "durum");
+  const stubTemiz = (komut: string[], _cwd: string) => {
+    const s = komut.join(" ");
+    if (s.includes("saglik.ps1")) return { cikti: "SONUC: 16 OK, 0 EKSIK, 1 SARI", kod: 0 };
+    if (s.includes("zincir-kontrol.ps1")) return { cikti: "ZINCIR OK", kod: 0 };
+    if (s.includes("git status")) return { cikti: "", kod: 0 };
+    return { cikti: "", kod: 0 };
+  };
+  assert(bekciKontrol(bTmp, stubTemiz).length === 0, "bekci: temiz repo anomali uretmez");
+  const stubEksik = (komut: string[], cwd: string) => komut.join(" ").includes("saglik.ps1") ? { cikti: "SONUC: 14 OK, 2 EKSIK, 1 SARI", kod: 0 } : stubTemiz(komut, cwd);
+  const aEksik = bekciKontrol(bTmp, stubEksik);
+  assert(aEksik.length === 1 && aEksik[0].anahtar === "saglik-eksik" && aEksik[0].detay.includes("2 EKSIK"), "bekci: saglik EKSIK yakalanir");
+  const stubZincir = (komut: string[], cwd: string) => komut.join(" ").includes("zincir-kontrol.ps1") ? { cikti: "ZINCIR KOPUK: 1 nokta", kod: 1 } : stubTemiz(komut, cwd);
+  assert(bekciKontrol(bTmp, stubZincir).some((a) => a.anahtar === "zincir-kopuk"), "bekci: zincir kopugu yakalanir");
+  const stubKirli = (komut: string[], cwd: string) => komut.join(" ").includes("git status") ? { cikti: " M README.md\n?? yeni.txt", kod: 0 } : stubTemiz(komut, cwd);
+  const aDrift = bekciKontrol(bTmp, stubKirli);
+  assert(aDrift.some((a) => a.anahtar === "git-drift" && a.detay.includes("2 kirli dosya")), "bekci: kirli agac + aktif tur yok = git-drift");
+  fsp.rmSync(bTmp + "/STATE_BOARD.md");
+  assert(!bekciKontrol(bTmp, stubKirli).some((a) => a.anahtar === "git-drift"), "bekci: STATE_BOARD'suz repo git-drift uretmez (agnostik sinir)");
+  fsp.writeFileSync(bTmp + "/STATE_BOARD.md", "durum");
+  const stubBelirsiz = (komut: string[], cwd: string) => komut.join(" ").includes("saglik.ps1") ? { cikti: "coktum", kod: 2 } : stubTemiz(komut, cwd);
+  assert(bekciKontrol(bTmp, stubBelirsiz).some((a) => a.anahtar === "saglik-belirsiz"), "bekci: SONUC'suz saglik ciktisi belirsiz anomalisi");
+
+  // telemetri-fail (agnostik, kontrol kohortu dahil)
+  const tTmp = fsp.mkdtempSync(os.tmpdir() + "/bekt-");
+  fsp.mkdirSync(tTmp + "/.verimlilik", { recursive: true });
+  const failKayitlar = Array.from({ length: 6 }, (_, i) => JSON.stringify({ ts: "2026-10-12T1" + i + ":00:00Z", tip: "tur", agentId: "a", provider: "p", toolCalls: 10, failedCalls: 4 })).join("\n") + "\n";
+  fsp.writeFileSync(tTmp + "/.verimlilik/telemetri.jsonl", failKayitlar);
+  const aTel = bekciKontrol(tTmp, stubTemiz);
+  assert(aTel.some((a) => a.anahtar === "telemetri-fail" && a.detay.includes("%40")), "bekci: fail %40 (6 tur) telemetri anomalisi");
+  fsp.writeFileSync(tTmp + "/.verimlilik/telemetri.jsonl", failKayitlar.replace(/"failedCalls":4/g, '"failedCalls":1'));
+  assert(!bekciKontrol(tTmp, stubTemiz).some((a) => a.anahtar === "telemetri-fail"), "bekci: fail %10 esik altinda susar");
+  fsp.rmSync(tTmp, { recursive: true, force: true });
+
+  // bekciTara: dedupe + coder-aktif + rapor dosyasi
+  const cTmp = fsp.mkdtempSync(os.tmpdir() + "/bekc-");
+  fsp.mkdirSync(cTmp + "/scripts", { recursive: true });
+  fsp.writeFileSync(cTmp + "/scripts/saglik.ps1", "stub");
+  fsp.writeFileSync(cTmp + "/STATE_BOARD.md", "durum");
+  const bAj = { id: "bek1", cwd: cTmp, provider: "codex" } as never;
+  const bHarita = new Map<string, never>([["bek1", bAj]]);
+  let bGiden = 0;
+  const bGonder = async () => { bGiden++; };
+  const gun = new Date("2026-10-12T18:30:00Z");
+  const t1 = bekciTara(bHarita, () => false, bGonder, stubEksik, gun);
+  assert(t1.anomalili === 1 && t1.bildirilen === 1 && bGiden === 1, "bekciTara: anomali bildirilir");
+  assert(fsp.existsSync(cTmp + "/raporlar/takip-sozlesme/2026-10-12.md"), "bekciTara: rapor dosyasi olusur");
+  const rIcerik = fsp.readFileSync(cTmp + "/raporlar/takip-sozlesme/2026-10-12.md", "utf8");
+  assert(rIcerik.includes("| saglik-eksik |"), "bekciTara: rapor satiri anahtar icerir");
+  const t2 = bekciTara(bHarita, () => false, bGonder, stubEksik, new Date("2026-10-12T19:00:00Z"));
+  assert(t2.anomalili === 1 && t2.bildirilen === 0 && bGiden === 1, "bekciTara: ayni gun ayni anahtar tekrar bildirilmez (dedupe)");
+  const t3 = bekciTara(bHarita, () => true, bGonder, stubEksik, gun);
+  assert(t3.ertelenen === 1 && t3.bildirilen === 0 && bGiden === 1, "bekciTara: aktif tur varken ertelenir (coder-aktif korumasi)");
+  fsp.mkdirSync(cTmp + "/.verimlilik", { recursive: true });
+  fsp.writeFileSync(cTmp + "/.verimlilik/ayar.json", JSON.stringify({ bekciKapali: true }));
+  const t4 = bekciTara(bHarita, () => false, bGonder, stubEksik, gun);
+  assert(t4.anomalili === 0 && t4.bildirilen === 0, "bekciTara: bekciKapali repo atlanir");
+  fsp.rmSync(cTmp, { recursive: true, force: true });
+
   console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
   process.exit(hata === 0 ? 0 : 1);
 })();
