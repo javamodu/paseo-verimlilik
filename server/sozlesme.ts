@@ -54,7 +54,7 @@ export function sonHandoffDosyasi(cwd: string): string | null {
     const dosyalar = readdirSync(dir)
       .filter((d) => /^HANDOFF-.*\.md$/i.test(d))
       .map((d) => ({ ad: d, mt: statSync(join(dir, d)).mtimeMs }))
-      .sort((a, b) => b.mt - a.mt);
+      .sort((a, b) => b.mt - a.mt || (a.ad < b.ad ? 1 : -1));
     return dosyalar.length > 0 ? dosyalar[0].ad : null;
   } catch {
     return null;

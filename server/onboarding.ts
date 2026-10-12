@@ -4,20 +4,10 @@ import type { PluginHookContext } from "@getpaseo/plugin/server";
 import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
 import { latestOutputText } from "./inspect";
 import { telemetriYaz } from "./telemetry";
-import { katmanKokuBul } from "./sozlesme";
+import { katmanKokuBul, sonHandoffDosyasi } from "./sozlesme";
 
 export function sonHandoff(cwd: string): string | null {
-  const dir = join(katmanKokuBul(cwd), "plans", "handoff");
-  if (!existsSync(dir)) return null;
-  try {
-    const dosyalar = readdirSync(dir)
-      .filter((d) => /^HANDOFF-.*\.md$/i.test(d))
-      .map((d) => ({ ad: d, mt: statSync(join(dir, d)).mtimeMs }))
-      .sort((a, b) => b.mt - a.mt);
-    return dosyalar.length > 0 ? dosyalar[0].ad : null;
-  } catch {
-    return null;
-  }
+  return sonHandoffDosyasi(cwd);
 }
 
 const ECHO_SINYALLERI = [
