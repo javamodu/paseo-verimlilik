@@ -1,0 +1,10 @@
+{
+    "etiket":  "v0.12-kilit",
+    "tarih":  "2026-10-13",
+    "commit":  "8ac16d5",
+    "doctor":  null,
+    "hedefler":  null,
+    "eksenPuanlari":  null,
+    "ekOzet":  "altAjan telemetri + rollup delta/kabul kapsami + bekci pano isaretcisi + CEKIRDEK O1",
+    "not":  "K-0021+K-0022+K-0023"
+}
