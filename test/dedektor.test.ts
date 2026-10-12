@@ -290,6 +290,21 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
   _testIcinKaliteSifirla();
   assert(basarisizOranMesaji("k2", onCagri(4, 4)) === null, "kalite: 5 cagri altinda susar (gurultu korumasi)");
   assert(basarisizOranMesaji("k3", onCagri(10, 1)) === null, "kalite: %10 esiginde susar");
+
+  // v0.8b1: tur penceresi + editCagrilari
+  const { turCagrilari, editCagrilari } = await import("../server/inspect");
+  const karma = [
+    userMsg("ilk tur"),
+    tc("exec", "shell", { command: "npm test", exitCode: 1 }),
+    tc("edit", "edit", { filePath: "a.ts" }),
+    userMsg("ikinci tur"),
+    tc("exec", "shell", { command: "Set-Content b.ts x", exitCode: 0 }),
+  ];
+  const pencere = turCagrilari(karma);
+  assert(pencere.length === 1, "turCagrilari yalniz son turu sayar (kumulatif kapandi): " + pencere.length);
+  assert(editCagrilari(pencere).length === 1, "editCagrilari shell-yazmayi edit sayar");
+  const bos = turCagrilari([tc("exec", "shell", { command: "ls", exitCode: 0 })]);
+  assert(bos.length === 1, "kullanici mesaji yoksa tum timeline pencere sayilir");
   _testIcinKaliteSifirla();
 
   console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");

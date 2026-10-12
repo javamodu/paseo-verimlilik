@@ -2,7 +2,8 @@ import { mkdirSync, appendFileSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import type { PluginHookAgent, PluginTurnOutcome } from "@getpaseo/plugin/server";
 import type { AgentTimelineItem, AgentUsage } from "@getpaseo/protocol/agent-types";
-import { toolCallOzetleri } from "./inspect";
+import { editCagrilari, turCagrilari } from "./inspect";
+import { katmanKokuBul } from "./sozlesme";
 import { haftalikRollup } from "./rollup";
 
 export interface TelemetriKayit {
@@ -33,7 +34,7 @@ let aktifTur = 0;
 export const PARALEL_TAVAN = 3;
 
 export function telemetriDosyasi(cwd: string): string {
-  return join(cwd, ".verimlilik", "telemetri.jsonl");
+  return join(katmanKokuBul(cwd), ".verimlilik", "telemetri.jsonl");
 }
 
 export function telemetriYaz(cwd: string, kayit: TelemetriKayit): void {
@@ -72,9 +73,9 @@ export function turKaydet(input: {
   loopDurtme: boolean;
   finishGateDurtme: boolean;
 }): void {
-  const ozetler = toolCallOzetleri(input.timeline);
+  const ozetler = turCagrilari(input.timeline);
   const shell = ozetler.filter((o) => o.command !== undefined);
-  const edits = ozetler.filter((o) => o.detailType === "edit" || o.detailType === "write");
+  const edits = editCagrilari(ozetler);
   const usage = input.usage;
   const detayParca: string[] = [];
   if (usage?.inputTokens) {

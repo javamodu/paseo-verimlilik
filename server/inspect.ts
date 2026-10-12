@@ -98,8 +98,18 @@ export function yazmaKomutuMu(komut: string): boolean {
 }
 
 // Edit tespiti: edit/write araclari + shell uzerinden yazma (apply_patch'siz ortamlar dahil).
+export function editCagrilari(ozetler: readonly ToolCallOzeti[]): ToolCallOzeti[] {
+  return ozetler.filter((o) => o.detailType === "edit" || o.detailType === "write" || (o.command !== undefined && yazmaKomutuMu(o.command)));
+}
+
 export function editliMi(ozetler: readonly ToolCallOzeti[]): boolean {
-  return ozetler.some((o) => o.detailType === "edit" || o.detailType === "write" || (o.command !== undefined && yazmaKomutuMu(o.command)));
+  return editCagrilari(ozetler).length > 0;
+}
+
+// Tur penceresi: son kullanici mesajindan sonraki cagrilar (kumulatif timeline sayimini onler).
+export function turCagrilari(timeline: readonly AgentTimelineItem[]): ToolCallOzeti[] {
+  const idx = sonKullaniciMesajiIndex(timeline);
+  return toolCallOzetleri(idx >= 0 ? timeline.slice(idx + 1) : timeline);
 }
 
 export function sonKullaniciMesajiIndex(timeline: readonly AgentTimelineItem[]): number {
