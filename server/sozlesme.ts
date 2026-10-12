@@ -107,7 +107,7 @@ export function isaretciMetni(kuralToplam: number, sebep?: string): string {
   ].join("\n");
 }
 
-export function enjeksiyonMetni(cwd: string, mevcutPrompt: string): EnjeksiyonSonuc {
+export function enjeksiyonMetni(cwd: string, mevcutPrompt: string, rolEki?: string | null): EnjeksiyonSonuc {
   const cekirdek = cekirdekYukle();
   const tarama = projeyiTara(cwd);
   const kuralToplam = kuralSayisi(cekirdek) + projeKuralSayisi(cwd);
@@ -143,7 +143,8 @@ export function enjeksiyonMetni(cwd: string, mevcutPrompt: string): EnjeksiyonSo
   }
 
   const isaretciler = ["", "## Proje katmanları (katman kökü: " + katmanKokuBul(cwd) + ")", ...satirlar].join("\n");
-  let metin = cekirdek.trimEnd() + "\n" + isaretciler + "\n\n" + mevcutPrompt;
+  const rolBlok = rolEki ? "\n## Rol\n" + rolEki + "\n" : "";
+  let metin = cekirdek.trimEnd() + "\n" + rolBlok + isaretciler + "\n\n" + mevcutPrompt;
   let butceAsimi = false;
   if (Buffer.byteLength(metin, "utf8") > ENJEKSIYON_BUTCE_BYTES) {
     butceAsimi = true;

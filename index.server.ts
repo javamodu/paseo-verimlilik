@@ -10,6 +10,7 @@ import { finishGateKontrol } from "./server/finishgate";
 import { permissionKontrol } from "./server/permission";
 import { pitbullBaslat, pitbullTurBasladi, pitbullTurBitti } from "./server/pitbull";
 import { bekciBaslat } from "./server/bekci";
+import { rolCoz, rolIzinKontrol } from "./server/roller";
 import { katmanKokuBul } from "./server/sozlesme";
 import { briefKontrol } from "./server/brief";
 import { kapsamKontrol } from "./server/kapsam";
@@ -57,9 +58,10 @@ export default function contribute(server: PluginServerContext) {
         return undefined;
       }
       const mevcut = request.config.systemPrompt ?? "";
+      const rol = rolCoz(request.config.title ?? null);
       let sonuc;
       try {
-        sonuc = enjeksiyonMetni(request.config.cwd, mevcut);
+        sonuc = enjeksiyonMetni(request.config.cwd, mevcut, rol?.sistemEki ?? null);
       } catch (error) {
         console.error("[paseo-verimlilik] enjeksiyon hatasi (dokunulmadi)", error);
         return undefined;
@@ -74,7 +76,9 @@ export default function contribute(server: PluginServerContext) {
         console.error(`[paseo-verimlilik] enjeksiyon engellendi (mod=kapali): kural ~${sonuc.kuralToplam}`);
         return undefined;
       }
-      return { ...request, config: { ...request.config, systemPrompt: sonuc.metin } };
+      const yeniConfig = { ...request.config, systemPrompt: sonuc.metin };
+      if (rol?.modeId && !yeniConfig.modeId) yeniConfig.modeId = rol.modeId;
+      return { ...request, config: yeniConfig };
     }),
   );
 
@@ -164,7 +168,12 @@ export default function contribute(server: PluginServerContext) {
     server.on("agent.permission_requested", async (event, context) => {
       paseoRef = context.paseo;
       try {
-        await permissionKontrol(event.agent, event.request, context);
+        const rol = rolCoz(event.agent.title ?? null);
+        if (rol && rol.profil !== "tam") {
+          await rolIzinKontrol(event.agent, event.request, context, rol);
+        } else {
+          await permissionKontrol(event.agent, event.request, context);
+        }
       } catch (error) {
         console.error("[paseo-verimlilik] permission hatasi", error);
       }

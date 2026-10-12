@@ -464,6 +464,33 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
   assert(t4.anomalili === 0 && t4.bildirilen === 0, "bekciTara: bekciKapali repo atlanir");
   fsp.rmSync(cTmp, { recursive: true, force: true });
 
+  // v0.10: rol sistemi (K-0015)
+  const { rolCoz, rolIzinKarari, ROLLER } = await import("../server/roller");
+  assert(rolCoz("[reviewer] drift incelemesi")?.ad === "reviewer", "rolCoz: [reviewer] taninir");
+  assert(rolCoz("[Coder] x")?.ad === "coder", "rolCoz: buyuk-kucuk harf");
+  assert(rolCoz("[bekçi] tarama")?.ad === "bekci", "rolCoz: bekci Turkce-cevirisi");
+  assert(rolCoz("duz baslik") === null && rolCoz(null) === null, "rolCoz: basliksiz/prefikssiz null");
+  const mkReq = (input: Record<string, unknown>) => ({ id: "r1", provider: "codex", name: "t", kind: "x", input }) as never;
+  const okur = ROLLER.tester, raporcu = ROLLER.reviewer, coderR = ROLLER.coder;
+  assert(rolIzinKarari(mkReq({ command: "git status" }), okur) === "allow", "okur: git status allow");
+  assert(rolIzinKarari(mkReq({ command: "npm test" }), okur) === "allow", "okur: npm test allow (kosucu)");
+  assert(rolIzinKarari(mkReq({ command: "npx tsc --noEmit" }), okur) === "allow", "okur: tsc --noEmit allow");
+  assert(rolIzinKarari(mkReq({ command: "Set-Content a.txt x" }), okur) === "deny", "okur: Set-Content deny");
+  assert(rolIzinKarari(mkReq({ command: "git commit -m x" }), okur) === "deny", "okur: git commit deny");
+  assert(rolIzinKarari(mkReq({ filePath: "src/a.ts" }), okur) === "deny", "okur: edit deny");
+  assert(rolIzinKarari(mkReq({ filePath: "raporlar/ozet.md" }), raporcu) === "allow", "raporcu: raporlar/ edit allow");
+  assert(rolIzinKarari(mkReq({ filePath: "src/a.ts" }), raporcu) === "deny", "raporcu: src edit deny");
+  assert(rolIzinKarari(mkReq({ command: "Set-Content raporlar/gun.md ozet" }), raporcu) === "allow", "raporcu: raporlar/ shell yazma allow");
+  assert(rolIzinKarari(mkReq({ command: "Set-Content src/a.ts y" }), raporcu) === "deny", "raporcu: src shell yazma deny");
+  assert(rolIzinKarari(mkReq({ command: "rm -rf x" }), okur) === "deny", "okur: tehlike kalibi deny korunur");
+  assert(rolIzinKarari(mkReq({ command: "npm install" }), okur) === null, "okur: tanimadik komut kullaniciya (null)");
+  assert(rolIzinKarari(mkReq({ command: "git status" }), coderR) === "allow", "coder: tam profil mevcut davranis");
+  assert(rolIzinKarari(mkReq({ command: "git commit -m x" }), coderR) === null, "coder: commit kullaniciya birakilir (mevcut polis)");
+  const { enjeksiyonMetni: enj2 } = await import("../server/sozlesme");
+  const rolEnj = enj2("D:\\Vibecode\\paseo-plugin", "MP", ROLLER.reviewer.sistemEki);
+  assert(rolEnj.metin.includes("## Rol") && rolEnj.metin.includes("REVIEWER"), "enjeksiyon: rol blogu cekirdek sonrasi duser");
+  assert(rolEnj.metin.indexOf("## Rol") < rolEnj.metin.indexOf("## Proje katman"), "enjeksiyon: rol isaretcilerden once (cache dostu)");
+
   console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
   process.exit(hata === 0 ? 0 : 1);
 })();

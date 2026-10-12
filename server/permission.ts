@@ -52,22 +52,18 @@ export function izinKarari(komut: string | null): "allow" | "deny" | null {
   return null;
 }
 
-export async function permissionKontrol(
+export async function izinYanitla(
   agent: PluginHookAgent,
   request: AgentPermissionRequest,
   context: PluginHookContext,
+  karar: "allow" | "deny",
+  komutAdi: string,
 ): Promise<void> {
-  const komut = shellCommand(request);
-  const karar = izinKarari(komut);
-  if (karar === null) {
-    return;
-  }
-  const komutAdi = komut ? komut.trim().split(/\s+/)[0] : "?";
   try {
     if (karar === "deny") {
       await context.paseo.agents.ref(agent.id).respondToPermission({
         requestId: request.id,
-        response: { behavior: "deny", message: "paseo-verimlilik permission polisi: tehlikeli komut kalibi engellendi (" + komutAdi + " ...)" },
+        response: { behavior: "deny", message: "paseo-verimlilik permission polisi: tehlikeli/yetkisiz komut engellendi (" + komutAdi + " ...)" },
       });
     } else {
       await context.paseo.agents.ref(agent.id).respondToPermission({
@@ -85,4 +81,18 @@ export async function permissionKontrol(
   } catch (error) {
     console.error("[paseo-verimlilik] permission yanit hatasi", error);
   }
+}
+
+export async function permissionKontrol(
+  agent: PluginHookAgent,
+  request: AgentPermissionRequest,
+  context: PluginHookContext,
+): Promise<void> {
+  const komut = shellCommand(request);
+  const karar = izinKarari(komut);
+  if (karar === null) {
+    return;
+  }
+  const komutAdi = komut ? komut.trim().split(/\s+/)[0] : "?";
+  await izinYanitla(agent, request, context, karar, komutAdi);
 }
