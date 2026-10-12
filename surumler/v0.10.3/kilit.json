@@ -1,0 +1,10 @@
+{
+    "etiket":  "v0.10.3-kilit",
+    "tarih":  "2026-10-12",
+    "commit":  "351f228",
+    "doctor":  null,
+    "hedefler":  null,
+    "eksenPuanlari":  null,
+    "ekOzet":  "tur telemetrisi: model + ayrik token + maliyetUsd + ort tur suresi",
+    "not":  ""
+}
