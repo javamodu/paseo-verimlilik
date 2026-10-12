@@ -255,7 +255,15 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
   assert(roMd.includes("%100 (1/1)"), "rollup kabul orani dogru");
     assert(roMd.includes("loop 1") && roMd.includes("Anlaşılmazlık: 1"), "rollup durtmeler dogru");
   assert(roMd.includes("%90"), "rollup cache-hit ortalamasi dogru (80+100)/2");
-  assert(haftalikRollup(roTmp, new Date("2026-10-12T19:00:00")) === null, "ayni hafta ikinci rollup atlar (idempotent)");
+  // hafta disi kayit sayilmaz (P1-4 suzme testi)
+  fsp.appendFileSync(roTmp + "/.verimlilik/telemetri.jsonl", JSON.stringify({ ts: "2026-10-05T10:00:00Z", tip: "tur", agentId: "a", provider: "p", turSn: 999, detay: "in=1 cacheHitPct=1" }) + "\n");
+  const roDosya2 = haftalikRollup(roTmp, new Date("2026-10-12T19:00:00"));
+  const roMd2 = fsp.readFileSync(roDosya2!, "utf8");
+  assert(roMd2.includes("Tur: 2"), "hafta disi kayit sayilmaz (W41 disarida): " + roMd2.match(/Tur: \d+/));
+  const roJson = JSON.parse(fsp.readFileSync(roDosya2!.replace(".md", ".json"), "utf8"));
+  assert(roJson.hafta === "2026-W42" && roJson.tur === 2 && roJson.ortCacheHit === 90, "makine-okunur json yan dosya dogru");
+  const roMd3 = fsp.readFileSync(haftalikRollup(roTmp, new Date("2026-10-12T20:00:00"))!, "utf8");
+  assert(roMd3 === roMd2, "ayni veri ayni raporu uretir (deterministik, canli hafta guncel)");
   fsp.rmSync(roTmp, { recursive: true, force: true });
 
   const { katmanKokuBul, projeyiTara } = await import("../server/sozlesme");
