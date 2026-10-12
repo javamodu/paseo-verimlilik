@@ -27,6 +27,7 @@ Bu metin paseo-verimlilik plugin'i tarafından enjekte edildi. Tam sözleşme: P
 2. İşaretçi prensibi: handoff özet + yol taşır; uzun kanıt raporlar/ dizinine.
 3. Zincir: her handoff öncekinin dosya adını taşır; kopuk zincir = alarm.
 4. Devralan echo doğrular: 3 soruya dosyalardan doğruladığı cevabı yazar ("kirli dosyalar?", "son commit?", "bekleyen ilk onay?"). Echo yoksa devir tamamlanmamıştır.
+5. Açılışta raporlar/gelen-kutu/ varsa işlenmemiş madde tara (K-0017); işlenen maddeye islenme + commit hash append edilir.
 5. Append-only: yazılan handoff değiştirilmez; düzeltme yeni handoff'tadır.
 
 ## Dosya-tabanlı hafıza katmanları

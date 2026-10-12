@@ -491,6 +491,21 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
   assert(rolEnj.metin.includes("## Rol") && rolEnj.metin.includes("REVIEWER"), "enjeksiyon: rol blogu cekirdek sonrasi duser");
   assert(rolEnj.metin.indexOf("## Rol") < rolEnj.metin.indexOf("## Proje katman"), "enjeksiyon: rol isaretcilerden once (cache dostu)");
 
+  // v0.10.1: bekci gelen-kutu-bekleyen (K-0017)
+  const gkTmp = fsp.mkdtempSync(os.tmpdir() + "/gk-");
+  fsp.mkdirSync(gkTmp + "/raporlar/gelen-kutu", { recursive: true });
+  assert(!bekciKontrol(gkTmp, stubTemiz).some((a) => a.anahtar === "gelen-kutu-bekleyen"), "kutu: bos dizin anomali uretmez");
+  const madde = (id: string, tarih: string, islenme: unknown) => ({ id, tarih, islenme });
+  fsp.writeFileSync(gkTmp + "/raporlar/gelen-kutu/reviewer-2026-10-10.json", JSON.stringify({ schemaSurum: 1, kaynak: "reviewer", tarih: "2026-10-10", maddeler: [madde("r-1", "2026-10-10", null), madde("r-2", "2026-10-10", { durum: "kabul", hash: "abc1234", ts: "2026-10-11" })] }));
+  const gkA = bekciKontrol(gkTmp, stubTemiz);
+  assert(gkA.some((a) => a.anahtar === "gelen-kutu-bekleyen" && a.detay.includes("1 madde")), "kutu: 2 gunluk islenmemis madde anomalisi");
+  fsp.writeFileSync(gkTmp + "/raporlar/gelen-kutu/reviewer-2026-10-10.json", JSON.stringify({ schemaSurum: 1, kaynak: "reviewer", tarih: "2026-10-10", maddeler: [madde("r-1", "2026-10-10", { durum: "kabul", hash: "abc1234", ts: "2026-10-11" })] }));
+  assert(!bekciKontrol(gkTmp, stubTemiz).some((a) => a.anahtar === "gelen-kutu-bekleyen"), "kutu: islenmis madde susar");
+  const bugun = new Date().toISOString().slice(0, 10);
+  fsp.writeFileSync(gkTmp + "/raporlar/gelen-kutu/reviewer-2026-10-10.json", JSON.stringify({ schemaSurum: 1, kaynak: "reviewer", tarih: bugun, maddeler: [madde("r-9", bugun, null)] }));
+  assert(!bekciKontrol(gkTmp, stubTemiz).some((a) => a.anahtar === "gelen-kutu-bekleyen"), "kutu: 24s dolmamis bekleyen susar (gurultu yok)");
+  fsp.rmSync(gkTmp, { recursive: true, force: true });
+
   console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
   process.exit(hata === 0 ? 0 : 1);
 })();

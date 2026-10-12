@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { PluginHookAgent } from "@getpaseo/plugin/server";
 import { katmanKokuBul } from "./sozlesme";
@@ -60,6 +60,31 @@ function telemetriFailAnomali(repoKok: string): BekciAnomali | null {
   return { anahtar: "telemetri-fail", detay: "son " + pencere.length + " turda basarisiz cagri %" + Math.round(oran * 100) + " (" + fail + "/" + toplam + ")" };
 }
 
+const GELEN_KUTU_ESIK_MS = 24 * 60 * 60_000;
+
+function gelenKutuBekleyen(repoKok: string, simdiMs: number): BekciAnomali | null {
+  const dir = join(repoKok, "raporlar", "gelen-kutu");
+  if (!existsSync(dir)) return null;
+  let bekleyen = 0;
+  let eski: string[] = [];
+  try {
+    for (const f of readdirSync(dir)) {
+      if (!f.endsWith(".json")) continue;
+      try {
+        const j = JSON.parse(readFileSync(join(dir, f), "utf8")) as { maddeler?: { id?: string; tarih?: string; islenme?: unknown }[]; tarih?: string };
+        for (const m of j.maddeler ?? []) {
+          if (m.islenme) continue;
+          bekleyen++;
+          const baz = Date.parse((m.tarih ?? j.tarih ?? "") + "T00:00:00Z");
+          if (!Number.isNaN(baz) && simdiMs - baz > GELEN_KUTU_ESIK_MS) eski.push(f + ":" + (m.id ?? "?"));
+        }
+      } catch { /* bozuk sidecar saglik kapisina duser */ }
+    }
+  } catch { return null; }
+  if (eski.length === 0) return null;
+  return { anahtar: "gelen-kutu-bekleyen", detay: eski.length + " madde 24s+ islenmemis (toplam bekleyen " + bekleyen + "): " + eski.slice(0, 3).join(", ") };
+}
+
 export function bekciKontrol(repoKok: string, calistir: KomutCalistir = gercekCalistir): BekciAnomali[] {
   const anomaliler: BekciAnomali[] = [];
   const saglik = psKopru(repoKok, "saglik.ps1", calistir);
@@ -86,6 +111,8 @@ export function bekciKontrol(repoKok: string, calistir: KomutCalistir = gercekCa
   }
   const tel = telemetriFailAnomali(repoKok);
   if (tel) anomaliler.push(tel);
+  const kutu = gelenKutuBekleyen(repoKok, Date.now());
+  if (kutu) anomaliler.push(kutu);
   return anomaliler;
 }
 
