@@ -1,8 +1,7 @@
 import type { RpcInput } from "@getpaseo/plugin";
 import type { PluginHandlerContext } from "@getpaseo/plugin/server";
 import { sozlesmeEnjekte } from "../shared/contracts";
-import { enjeksiyonMetni, isaretciMetni } from "./sozlesme";
-import { ayarOku } from "./ayar";
+import { enjeksiyonMetni } from "./sozlesme";
 
 export async function enjekteHandler(
   input: RpcInput<typeof sozlesmeEnjekte>,
@@ -33,14 +32,9 @@ export async function enjekteHandler(
       continue;
     }
     const sonuc = enjeksiyonMetni(hedef.cwd, "");
-    if (sonuc.kuralBlok) {
-      if (ayarOku(hedef.cwd).enjeksiyonMod !== "kapali") {
-        await paseo.agents.ref(hedef.id).send(isaretciMetni(sonuc.kuralToplam));
-        gonderildi++;
-        continue;
-      }
+    if (sonuc.atlandi) {
       atlandi++;
-      console.error(`[paseo-verimlilik] enjekte atlandi (kural >80): ${hedef.id}`);
+      console.error(`[paseo-verimlilik] enjekte atlandi (mod=kapali): ${hedef.id}`);
       continue;
     }
     await paseo.agents.ref(hedef.id).send(
