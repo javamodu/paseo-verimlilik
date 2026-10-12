@@ -1,4 +1,6 @@
 import { toolCallOzetleri } from "../server/inspect";
+import * as osM from "node:os";
+import * as fspM from "node:fs";
 import { CEKIRDEK } from "../server/cekirdek";
 import { enjeksiyonMetni, kuralSayisi, KURAL_BLOK } from "../server/sozlesme";
 
@@ -28,6 +30,33 @@ assert(enj.metin.startsWith("# SÖZLEŞME ÇEKİRDEK"), "enjeksiyon CEKIRDEK ile
 assert(enj.metin.endsWith("MEVCUT PROMPT"), "mevcut prompt sonda korunur");
 assert(enj.metin.includes("ANAYASA.md VAR"), "paseo-plugin reposunda ANAYASA tespit edildi");
 assert(enj.kuralToplam > kuralSayisi(CEKIRDEK), "proje kurallari toplama eklendi: " + enj.kuralToplam);
+
+
+
+// v0.8c1: enjeksiyon modu her akista uygulanir (P1-5)
+{
+  const mkMod = (mod: string) => {
+    const d = fspM.mkdtempSync(osM.tmpdir() + "/mod-");
+    fspM.mkdirSync(d + "/.verimlilik", { recursive: true });
+    fspM.writeFileSync(d + "/.verimlilik/ayar.json", JSON.stringify({ enjeksiyonMod: mod }));
+    fspM.writeFileSync(d + "/AGENTS.md", "- kural1");
+    return d;
+  };
+  const dKapali = mkMod("kapali");
+  const rKapali = enjeksiyonMetni(dKapali, "MP");
+  assert(rKapali.atlandi === true && rKapali.metin === "", "mod=kapali: enjeksiyon atlanir (kural blogu olmadan da)");
+  const dIsaretci = mkMod("isaretci");
+  const rIsaretci = enjeksiyonMetni(dIsaretci, "MP");
+  assert(rIsaretci.atlandi === false && rIsaretci.metin.includes("sözleşme işaretçisi") && !rIsaretci.metin.includes("# SÖZLEŞME ÇEKİRDEK"), "mod=isaretci: kisa metin, cekirdek yok");
+  assert(rIsaretci.metin.endsWith("MP"), "mod=isaretci: mevcut prompt korunur");
+  const dTam = mkMod("tam");
+  const rTam = enjeksiyonMetni(dTam, "MP");
+  assert(rTam.atlandi === false && rTam.metin.includes("# SÖZLEŞME ÇEKİRDEK"), "mod=tam: tam cekirdek");
+  assert(!rIsaretci.metin.includes("(paket reposu)"), "isaretci hayalet referans icermez");
+  fspM.rmSync(dKapali, { recursive: true, force: true });
+  fspM.rmSync(dIsaretci, { recursive: true, force: true });
+  fspM.rmSync(dTam, { recursive: true, force: true });
+}
 
 const bos = enjeksiyonMetni("D:\\", "");
 assert(bos.metin.includes("ilk-15-dakika"), "bossuz projede onboarding isaretcisi duser");

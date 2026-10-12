@@ -1,4 +1,5 @@
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
+import { ayarOku } from "./ayar";
 import { join } from "node:path";
 import { CEKIRDEK } from "./cekirdek";
 
@@ -93,14 +94,16 @@ export interface EnjeksiyonSonuc {
   kuralBlok: boolean;
   kuralSari: boolean;
   butceAsimi: boolean;
+  atlandi: boolean;
 }
 
-export function isaretciMetni(kuralToplam: number): string {
+export function isaretciMetni(kuralToplam: number, sebep?: string): string {
+  const neden = sebep ?? ("Aktif kural sayısı ~" + kuralToplam + " (>80) — tam ÇEKİRDEK enjeksiyonu bloklandı (bağlam hijyeni).");
   return [
     "[paseo-verimlilik · sözleşme işaretçisi]",
-    "Aktif kural sayısı ~" + kuralToplam + " (>80) — tam ÇEKİRDEK enjeksiyonu bloklandı (bağlam hijyeni).",
+    neden,
     "Özet: okumadan yazma · kanıt = kalıcı kayıt · kapanış = test/lint yeşil · devir töreni (handoff + echo) · dürtmede 2 satır durum.",
-    "Tam sözleşme: PASEO-VERIMLILIK-REHBERI v2.0 (paket reposu).",
+    "Tam metin proje sahibinden istenir: PASEO-VERIMLILIK-REHBERI-v2.0.md (EK özetleri ÇEKİRDEK içindedir).",
   ].join("\n");
 }
 
@@ -110,6 +113,15 @@ export function enjeksiyonMetni(cwd: string, mevcutPrompt: string): EnjeksiyonSo
   const kuralToplam = kuralSayisi(cekirdek) + projeKuralSayisi(cwd);
   const kuralBlok = kuralToplam > KURAL_BLOK;
   const kuralSari = kuralToplam > KURAL_SARI && !kuralBlok;
+  const mod = ayarOku(cwd).enjeksiyonMod;
+
+  if (mod === "kapali") {
+    return { metin: "", kuralToplam, kuralBlok, kuralSari, butceAsimi: false, atlandi: true };
+  }
+  if (kuralBlok || mod === "isaretci") {
+    const sebep = kuralBlok ? undefined : "Enjeksiyon modu: işaretçi (.verimlilik/ayar.json) — tam ÇEKİRDEK atlandı.";
+    return { metin: isaretciMetni(kuralToplam, sebep) + "\n\n" + mevcutPrompt, kuralToplam, kuralBlok, kuralSari, butceAsimi: false, atlandi: false };
+  }
 
   const satirlar: string[] = [];
   if (tarama.anayasa) satirlar.push("- ANAYASA.md VAR → üst otorite; çelişkide o kazanır. İlk işin okumak.");
@@ -136,6 +148,9 @@ export function enjeksiyonMetni(cwd: string, mevcutPrompt: string): EnjeksiyonSo
   if (Buffer.byteLength(metin, "utf8") > ENJEKSIYON_BUTCE_BYTES) {
     butceAsimi = true;
     metin = cekirdek.trimEnd() + "\n[not: 20KB bütçe aşımı — proje işaretçileri kırpıldı]\n\n" + mevcutPrompt;
+    if (Buffer.byteLength(metin, "utf8") > ENJEKSIYON_BUTCE_BYTES) {
+      metin = cekirdek.trimEnd() + "\n[not: 20KB aşımı sürüyor — işaretçiler kırpıldı; mevcut prompt hacimli (" + Buffer.byteLength(metin, "utf8") + "B)]\n\n" + mevcutPrompt;
+    }
   }
-  return { metin, kuralToplam, kuralBlok, kuralSari, butceAsimi };
+  return { metin, kuralToplam, kuralBlok, kuralSari, butceAsimi, atlandi: false };
 }
