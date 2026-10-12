@@ -146,9 +146,11 @@ export default function contribute(server: PluginServerContext) {
       }
 
       let usage = null;
+      let model: string | null = null;
       try {
         const snap = await context.paseo.agents.ref(agentId).refresh();
         usage = snap?.agent?.lastUsage ?? null;
+        model = snap?.agent?.model ?? null;
       } catch {
         // usage alinamazsa null kalir
       }
@@ -158,6 +160,7 @@ export default function contribute(server: PluginServerContext) {
         outcome: event.outcome,
         timeline: event.timeline,
         usage,
+        model,
         loopDurtme,
         finishGateDurtme,
       });

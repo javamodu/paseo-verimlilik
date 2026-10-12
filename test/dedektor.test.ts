@@ -506,6 +506,30 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
   assert(!bekciKontrol(gkTmp, stubTemiz).some((a) => a.anahtar === "gelen-kutu-bekleyen"), "kutu: 24s dolmamis bekleyen susar (gurultu yok)");
   fsp.rmSync(gkTmp, { recursive: true, force: true });
 
+  
+  // v0.10.3: model + ayrik token + maliyet telemetrisi
+  {
+    const { turKaydet: tk2, telemetriOzetle: to2, telemetriDosyasi: td2, turBaslat: tb2 } = await import("../server/telemetry");
+    const tokTmp = fsp.mkdtempSync(os.tmpdir() + "/tok-");
+    tk2({ agent: { id: "k1", cwd: tokTmp, provider: "codex" }, turnId: "t1", outcome: { kind: "completed" }, timeline: [], usage: { inputTokens: 1000, outputTokens: 200, cachedInputTokens: 800, totalCostUsd: 0.0123 }, model: "gpt-6.1-sol", loopDurtme: false, finishGateDurtme: false } as never);
+    tk2({ agent: { id: "k2", cwd: tokTmp, provider: "kilo" }, turnId: "t2", outcome: { kind: "completed" }, timeline: [], usage: { inputTokens: 500, outputTokens: 100 }, model: "claude-opus-4.8", loopDurtme: false, finishGateDurtme: false } as never);
+    const satirlar = fsp.readFileSync(td2(tokTmp), "utf8").trim().split("\n");
+    const k1 = JSON.parse(satirlar[0]);
+    assert(k1.model === "gpt-6.1-sol", "tur kaydi model tasir: " + k1.model);
+    assert(k1.inTok === 1000 && k1.outTok === 200 && k1.cacheTok === 800, "ayrik token alanlari: " + JSON.stringify([k1.inTok, k1.outTok, k1.cacheTok]));
+    assert(Math.abs(k1.maliyetUsd - 0.0123) < 0.0001, "tur kaydi maliyet tasir: " + k1.maliyetUsd);
+    const tokOz = to2(tokTmp);
+    assert(tokOz.inTok === 1500 && tokOz.outTok === 300 && tokOz.cacheTok === 800, "ozet token toplamlari: " + JSON.stringify([tokOz.inTok, tokOz.outTok, tokOz.cacheTok]));
+    assert(tokOz.modeller["gpt-6.1-sol"] === 1 && tokOz.modeller["claude-opus-4.8"] === 1, "model dagilimi: " + JSON.stringify(tokOz.modeller));
+    assert(Math.abs(tokOz.maliyetUsd - 0.0123) < 0.0001, "ozet maliyet: " + tokOz.maliyetUsd);
+    assert(tokOz.ortTurSn === null, "turBaslat olmadan ortTurSn null");
+    tb2("k3");
+    tk2({ agent: { id: "k3", cwd: tokTmp, provider: "codex" }, turnId: "t3", outcome: { kind: "completed" }, timeline: [], usage: null, model: null, loopDurtme: false, finishGateDurtme: false } as never);
+    const tokOz2 = to2(tokTmp);
+    assert(typeof tokOz2.ortTurSn === "number", "turBaslat sonrasi ortTurSn sayi: " + tokOz2.ortTurSn);
+    fsp.rmSync(tokTmp, { recursive: true, force: true });
+  }
+
   console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
   process.exit(hata === 0 ? 0 : 1);
 })();
