@@ -420,6 +420,8 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
   assert(aDrift.some((a) => a.anahtar === "git-drift" && a.detay.includes("2 kirli dosya")), "bekci: kirli agac + aktif tur yok = git-drift");
   const stubSadeceRollup = (komut: string[], cwd: string) => komut.join(" ").includes("git status") ? { cikti: " M raporlar/telemetri-haftalik/2026-W42.md", kod: 0 } : stubTemiz(komut, cwd);
   assert(!bekciKontrol(bTmp, stubSadeceRollup).some((a) => a.anahtar === "git-drift"), "bekci: yalniz rollup kiri drift sayilmaz (otomasyon istisnasi)");
+  const stubSadeceVerimlilik = (komut: string[], cwd: string) => komut.join(" ").includes("git status") ? { cikti: "?? .verimlilik/", kod: 0 } : stubTemiz(komut, cwd);
+  assert(!bekciKontrol(bTmp, stubSadeceVerimlilik).some((a) => a.anahtar === "git-drift"), "bekci: yalniz .verimlilik kiri drift sayilmaz (telemetri istisnasi)");
   fsp.rmSync(bTmp + "/STATE_BOARD.md");
   assert(!bekciKontrol(bTmp, stubKirli).some((a) => a.anahtar === "git-drift"), "bekci: STATE_BOARD'suz repo git-drift uretmez (agnostik sinir)");
   fsp.writeFileSync(bTmp + "/STATE_BOARD.md", "durum");

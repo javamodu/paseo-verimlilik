@@ -78,7 +78,7 @@ export function bekciKontrol(repoKok: string, calistir: KomutCalistir = gercekCa
   if (existsSync(join(repoKok, "STATE_BOARD.md"))) {
     const st = calistir(["git", "status", "--short"], repoKok);
     if (st.kod === 0 && st.cikti.trim().length > 0) {
-      const kirli = st.cikti.trim().split(/\r?\n/).filter((l) => !/raporlar[\/\\]telemetri-haftalik[\/\\]/.test(l));
+      const kirli = st.cikti.trim().split(/\r?\n/).filter((l) => !/raporlar[\/\\]telemetri-haftalik[\/\\]/.test(l) && !/\.verimlilik[\/\\]/.test(l));
       if (kirli.length > 0) {
         anomaliler.push({ anahtar: "git-drift", detay: kirli.length + " kirli dosya, aktif tur yok" });
       }
