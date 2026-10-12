@@ -10,13 +10,16 @@ export interface BriefBulgu {
   zayif: number;
 }
 
-export function briefTara(timeline: readonly AgentTimelineItem[]): BriefBulgu {
+export function briefTara(timeline: readonly AgentTimelineItem[], gorulen?: Set<string>): BriefBulgu {
   let toplam = 0;
   let zayif = 0;
   for (const item of timeline) {
     if (item.type !== "tool_call") continue;
     const detail = item.detail as Record<string, unknown> | undefined;
     if (!detail || detail.type !== "sub_agent") continue;
+    const callId = typeof (item as { callId?: unknown }).callId === "string" ? (item as { callId: string }).callId : null;
+    if (callId && gorulen?.has(callId)) continue;
+    if (callId) gorulen?.add(callId);
     toplam++;
     const desc = typeof detail.description === "string" ? detail.description : "";
     const maddeVar = /(^|\n)\s*[-*\d]+[.)]\s/.test(desc) || desc.includes(" · ") || desc.includes("·");
@@ -30,6 +33,7 @@ export function briefTara(timeline: readonly AgentTimelineItem[]): BriefBulgu {
 }
 
 const durum = new Map<string, number>();
+const gorulenler = new Map<string, Set<string>>();
 
 export async function briefKontrol(
   agentId: string,
@@ -38,7 +42,9 @@ export async function briefKontrol(
   timeline: readonly AgentTimelineItem[],
   context: PluginHookContext,
 ): Promise<boolean> {
-  const bulgu = briefTara(timeline);
+  let gorulen = gorulenler.get(agentId);
+  if (!gorulen) { gorulen = new Set<string>(); gorulenler.set(agentId, gorulen); }
+  const bulgu = briefTara(timeline, gorulen);
   if (bulgu.toplam === 0 || bulgu.zayif === 0) {
     return false;
   }

@@ -194,6 +194,14 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
   const ucAnahtar = [userMsg("delege et"), tc("s","sub_agent",{description:"Hedef: X yap. Cikti: Y formatinda. Sinir: W yapma. Uzunluk icin ek metin."}), asstMsg("tamam")];
   assert(briefTara(ucAnahtar).zayif === 0, "v0.8c3: 3 anahtar gecer");
 
+  // v0.12.1: callId-bazli dedupe — eski brief her turda yeniden durtmesin
+  const gorulen = new Set<string>();
+  const br1 = briefTara(zayifBrief, gorulen);
+  assert(br1.toplam === 1 && br1.zayif === 1, "ilk tarama sayar");
+  const br2 = briefTara(zayifBrief, gorulen);
+  assert(br2.toplam === 0 && br2.zayif === 0, "ayni callId ikinci taramada atlanir (dedupe)");
+  assert(briefTara(zayifBrief).zayif === 1, "gorulen seti verilmezse eski davranis korunur");
+
 
   const { onboardingTara, onboardingKontrol, sonHandoff } = await import("../server/onboarding");
   const os = await import("node:os");
