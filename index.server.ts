@@ -14,7 +14,7 @@ import { briefKontrol } from "./server/brief";
 import { kapsamKontrol } from "./server/kapsam";
 import { onboardingKontrol, onboardingTara } from "./server/onboarding";
 import { enjekteHandler } from "./server/enjekte";
-import { toolCallOzetleri } from "./server/inspect";
+import { editliMi, turCagrilari } from "./server/inspect";
 import { KARISIKLIK_DESENI, RET_DESENI } from "./server/desenler";
 import { sonDegerlendirmeOku } from "./server/degerlendirme";
 import { basarisizOranMesaji } from "./server/kalite";
@@ -98,8 +98,8 @@ export default function contribute(server: PluginServerContext) {
     server.on("agent.turn_ended", async (event, context) => {
       paseoRef = context.paseo;
       const agentId = event.agent.id;
-      const ozetlerTur = toolCallOzetleri(event.timeline);
-      const editliTur = ozetlerTur.some((o) => o.detailType === "edit" || o.detailType === "write");
+      const ozetlerTur = turCagrilari(event.timeline);
+      const editliTur = editliMi(ozetlerTur);
       pitbullTurBitti(agentId, editliTur);
       let loopDurtme = false;
       let finishGateDurtme = false;
