@@ -7,12 +7,15 @@ const YAZICI_STALL_ESIK_MS = 15 * 60_000;
 const OKUYUCU_STALL_ESIK_MS = 20 * 60_000;
 const DURTME_COOLDOWN_MS = 10 * 60_000;
 const MAKS_ARDISIK_STALL = 3;
+const MAKS_OTURUM_DURTME = 5;
+const BAYAT_TUR_MS = 24 * 60 * 60_000;
 
 interface PitbullState {
   turBaslangic: number | null;
   ardisikStall: number;
   sonDurtme: number;
   sonTurEditliydi: boolean;
+  toplamDurtme: number;
 }
 
 const durum = new Map<string, PitbullState>();
@@ -21,7 +24,7 @@ const PLUGIN_BASLANGIC = Date.now();
 function stateAl(agentId: string): PitbullState {
   let s = durum.get(agentId);
   if (!s) {
-    s = { turBaslangic: null, ardisikStall: 0, sonDurtme: PLUGIN_BASLANGIC, sonTurEditliydi: false };
+    s = { turBaslangic: null, ardisikStall: 0, sonDurtme: PLUGIN_BASLANGIC, sonTurEditliydi: false, toplamDurtme: 0 };
     durum.set(agentId, s);
   }
   return s;
@@ -49,6 +52,14 @@ export function pitbullTara(
   for (const [agentId, agent] of ajanlar) {
     const s = durum.get(agentId);
     if (!s || s.turBaslangic === null) continue;
+    // Bayat turBaslangic korumasi: 24 saatten eski acik tur = tur_ended hic gelmemis (ajan olu/kapali) — durtme uretme
+    if (simdi - s.turBaslangic > BAYAT_TUR_MS) {
+      s.turBaslangic = null;
+      s.ardisikStall = 0;
+      telemetriYaz(agent.cwd, { ts: new Date().toISOString(), tip: "lint", agentId, provider: agent.provider, detay: "pitbull-bayat-tur sifirlandi" });
+      continue;
+    }
+    if (s.toplamDurtme >= MAKS_OTURUM_DURTME) continue;
     const stallSuresi = simdi - s.turBaslangic;
     const yaziciModu = s.sonTurEditliydi;
     const ayar = ayarOku(agent.cwd);
@@ -70,6 +81,7 @@ export function pitbullTara(
       continue;
     }
     s.ardisikStall++;
+    s.toplamDurtme++;
     s.sonDurtme = simdi;
     dirtulen++;
     telemetriYaz(agent.cwd, {

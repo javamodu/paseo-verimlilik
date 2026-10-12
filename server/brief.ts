@@ -21,7 +21,7 @@ export function briefTara(timeline: readonly AgentTimelineItem[]): BriefBulgu {
     const desc = typeof detail.description === "string" ? detail.description : "";
     const maddeVar = /(^|\n)\s*[-*\d]+[.)]\s/.test(desc) || desc.includes(" · ") || desc.includes("·");
     const anahtarSayisi = (desc.match(OGE_ANAHTAR) ?? []).length;
-    const gucluYapi = maddeVar || anahtarSayisi >= 2;
+    const gucluYapi = maddeVar || anahtarSayisi >= 3;
     if (desc.length < MIN_BRIEF_UZUNLUK || !gucluYapi) {
       zayif++;
     }

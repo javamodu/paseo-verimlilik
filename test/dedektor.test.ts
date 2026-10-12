@@ -148,6 +148,24 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
   const gonder2 = async (_a: unknown, m: string) => { giden++; sonMetin = m; };
   let r5 = pitbullTara(harita, gonder2);
   assert(r5.dirtulen === 1, "16dk yazici stall: pitbull durtur (yazici esigi 15dk)");
+
+  // v0.8c3: oturum durtme tavani (5) + bayat tur korumasi (24sa)
+  const aj3 = { id: "pb3", cwd: "D:/Vibecode/paseo-verimlilik", provider: "codex" } as never;
+  const harita3 = new Map<string, never>([["pb3", aj3]]);
+  pitbullTurBasladi("pb3", Date.now() - 21 * 60_000);
+  let giden3 = 0;
+  const gonder3 = async () => { giden3++; };
+  for (let i = 0; i < 7; i++) {
+    const st = _testIcinDurumVer("pb3");
+    if (st) { st.sonDurtme = Date.now() - 11 * 60_000; st.turBaslangic = Date.now() - 21 * 60_000; st.ardisikStall = 0; }
+    pitbullTara(harita3, gonder3);
+  }
+  assert(giden3 === 5, "oturum tavani: 5 durtmeden sonra susar (giden=" + giden3 + ")");
+  const aj4 = { id: "pb4", cwd: "D:/Vibecode/paseo-verimlilik", provider: "codex" } as never;
+  const harita4 = new Map<string, never>([["pb4", aj4]]);
+  pitbullTurBasladi("pb4", Date.now() - 25 * 60 * 60_000);
+  const rBayat = pitbullTara(harita4, async () => { throw new Error("olmamali"); });
+  assert(rBayat.dirtulen === 0 && _testIcinDurumVer("pb4")!.turBaslangic === null, "bayat tur (25sa) durtme uretmez, sifirlanir");
   assert(sonMetin.includes("yazım kümesi sessiz"), "yazici durtmesi yazim-kumesi sinifini bildirir");
   harita.delete("pb2");
 
@@ -169,6 +187,10 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
   assert(briefTara(iyiBrief).zayif === 0, "uzun+maddeli brief gecer");
   const brefsiz = [userMsg("is"), tc("e","edit",{filePath:"a.ts"}), asstMsg("ok")];
   assert(briefTara(brefsiz).toplam === 0, "sub_agent yoksa brief taramasi sifir");
+  const ikiAnahtar = [userMsg("delege et"), tc("s","sub_agent",{description:"Hedef: X yap. Cikti: Y formatinda olsun. Bu metin uzunluk esigini gecmek icin biraz daha uzun."}), asstMsg("tamam")];
+  assert(briefTara(ikiAnahtar).zayif === 1, "v0.8c3: 2 anahtar yetmez (>=3 sarti)");
+  const ucAnahtar = [userMsg("delege et"), tc("s","sub_agent",{description:"Hedef: X yap. Cikti: Y formatinda. Sinir: W yapma. Uzunluk icin ek metin."}), asstMsg("tamam")];
+  assert(briefTara(ucAnahtar).zayif === 0, "v0.8c3: 3 anahtar gecer");
 
 
   const { onboardingTara, onboardingKontrol, sonHandoff } = await import("../server/onboarding");

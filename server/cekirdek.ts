@@ -49,7 +49,7 @@ Koddan türetilebilir bilgi hafızaya GİRMEZ (çift-doğru-kaynak riski).
 - Test: testsiz kod merge olmaz; kapanış = tam süit yeşil.
 - Canlı sunucuya test koşma; izole port + restart yalnız onayla.
 - Satır sonu: dosyanın LF/CRLF'sini koru; geçici dosyalar koşu sonunda silinir.
-- Kapsam: yeni özellik = yeni dosya + ince kanca; iş başına mevcut dosya ≤3 — aşan iş bölünür.
+- Kapsam: yeni özellik = yeni dosya + ince kanca; iş başına mevcut dosya ≤3 — aşan iş bölünür. Belgelenmiş proje tarifleri (reçete adımları) bu sınırdan istisnadır.
 
 ## EK özetleri (tetikleyici + çekirdek davranış)
 
