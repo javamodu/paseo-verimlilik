@@ -29,6 +29,7 @@ export interface TelemetriKayit {
   rol?: string;
   model?: string;
   mod?: string;
+  altAjan?: boolean;
   inTok?: number;
   outTok?: number;
   cacheTok?: number;
@@ -108,6 +109,7 @@ export function turKaydet(input: {
     rol: rolCoz(input.agent.title ?? null)?.ad,
     model: input.model ?? undefined,
     mod: input.mod ?? undefined,
+    altAjan: input.agent.parentAgentId ? true : undefined,
     inTok: usage?.inputTokens ?? undefined,
     outTok: usage?.outputTokens ?? undefined,
     cacheTok: usage?.cachedInputTokens ?? undefined,

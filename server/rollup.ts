@@ -23,6 +23,7 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
 
   let tur = 0, kabul = 0, ret = 0, karisiklik = 0, loop = 0, fg = 0, pitbull = 0;
   let turSnToplam = 0, turSnAdet = 0, cacheAgirlikli = 0, cacheAgirlik = 0;
+  let altAjanTur = 0;
   for (const satir of readFileSync(tel, "utf8").split(/\r?\n/)) {
     if (!satir.trim()) continue;
     try {
@@ -32,6 +33,7 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
       if (isNaN(tarih.getTime()) || isoHafta(tarih) !== hafta) continue;
       if (r.tip === "tur") {
         tur++;
+        if (r.altAjan) altAjanTur++;
         if (r.loopDurtme) loop++;
         if (r.finishGateDurtme) fg++;
         if (typeof r.turSn === "number") { turSnToplam += r.turSn; turSnAdet++; }
@@ -63,6 +65,25 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
   const ortTurSn = turSnAdet > 0 ? Math.round(turSnToplam / turSnAdet) : null;
   const ortCache = cacheAgirlik > 0 ? Math.round((cacheAgirlikli / cacheAgirlik) * 10) / 10 : null;
   const oran = kabulOrani !== null ? "%" + Math.round(kabulOrani) + " (" + kabul + "/" + kabulToplam + ")" : "henüz veri yok";
+  const oncekiHaftaAd = isoHafta(new Date(simdi.getTime() - 7 * 86400000));
+  const kabulKapsam = kabulToplam > 0
+    ? kabulToplam + " kayıt"
+    : tur > 0
+      ? "koşul oluşmadı (koşul: editli completed tur + ardışık kullanıcı mesajı; tek-tur ajanlarda oluşmaz)"
+      : "—";
+  let deltaObj: { tur: number | null; kabulPuan: number | null; pitbull: number | null; cacheHitPuan: number | null } | null = null;
+  const oncekiYol = join(dir, oncekiHaftaAd + ".json");
+  if (existsSync(oncekiYol)) {
+    try {
+      const o = JSON.parse(readFileSync(oncekiYol, "utf8")) as Record<string, unknown>;
+      const fark = (a: number | null, b: unknown): number | null => (a === null || typeof b !== "number" ? null : Math.round((a - (b as number)) * 10) / 10);
+      deltaObj = { tur: fark(tur, o.tur), kabulPuan: fark(kabulOrani, o.kabulOrani), pitbull: fark(pitbull, o.pitbull), cacheHitPuan: fark(ortCache, o.ortCacheHit) };
+    } catch { deltaObj = null; }
+  }
+  const imzali = (n: number | null, birim = ""): string => (n === null ? "—" : (n > 0 ? "+" : "") + n + birim);
+  const deltaSatir = deltaObj
+    ? "- Önceki haftaya göre (" + oncekiHaftaAd + "): tur " + imzali(deltaObj.tur) + " · kabul " + imzali(deltaObj.kabulPuan, " puan") + " · pitbull " + imzali(deltaObj.pitbull) + " · cache-hit " + imzali(deltaObj.cacheHitPuan, " puan")
+    : "- Önceki hafta (" + oncekiHaftaAd + "): veri yok — baz hafta, trend hesaplanamaz";
   const md = [
     "# Telemetri Haftalık Özet — " + hafta,
     "",
@@ -73,11 +94,15 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
     "- Dürtmeler: loop " + loop + " · finish-gate " + fg + " · pitbull " + pitbull,
     "- Anlaşılmazlık: " + karisiklik,
     "- Ort. cache-hit (token-ağırlıklı): " + (ortCache !== null ? "%" + ortCache : "—"),
+    "- Alt-ajan turları: " + altAjanTur + (altAjanTur === 0 ? " (harness spawn'ları bu sayıma girmez — REHBER §8)" : ""),
+    "- Kabul kapsamı: " + kabulKapsam,
+    deltaSatir,
     "",
   ].join("\n");
   const json = {
     hafta, uretim: simdi.toISOString(), tur, ortTurSn, kabul, ret, kabulOrani,
     loop, finishGate: fg, pitbull, karisiklik, ortCacheHit: ortCache,
+    altAjanTur, kabulKayit: kabulToplam, delta: deltaObj,
   };
   mkdirSync(dir, { recursive: true });
   writeFileSync(hedefDosya, md, "utf8");

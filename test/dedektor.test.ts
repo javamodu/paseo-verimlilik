@@ -324,6 +324,47 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
   assert(roMd3 === roMd2, "ayni veri ayni raporu uretir (deterministik, canli hafta guncel)");
   fsp.rmSync(roTmp, { recursive: true, force: true });
 
+  // v0.12: rollup delta + kabul kapsami + alt-ajan (K-0021/K-0022)
+  const rdTmp = fsp.mkdtempSync(os.tmpdir() + "/rolld-");
+  fsp.mkdirSync(rdTmp + "/.verimlilik", { recursive: true });
+  fsp.mkdirSync(rdTmp + "/raporlar/telemetri-haftalik", { recursive: true });
+  fsp.writeFileSync(rdTmp + "/raporlar/telemetri-haftalik/2026-W41.json", JSON.stringify({ hafta: "2026-W41", tur: 1, kabulOrani: 50, pitbull: 0, ortCacheHit: 80 }));
+  fsp.writeFileSync(rdTmp + "/.verimlilik/telemetri.jsonl", [
+    { ts: "2026-10-12T10:00:00Z", tip: "tur", agentId: "a", provider: "p", altAjan: true, detay: "in=1000 cacheHitPct=90" },
+    { ts: "2026-10-12T11:00:00Z", tip: "tur", agentId: "b", provider: "p" },
+    { ts: "2026-10-12T12:00:00Z", tip: "kabul", agentId: "a", provider: "p", kabul: true },
+  ].map((k) => JSON.stringify(k)).join("\n") + "\n");
+  const rdMd = fsp.readFileSync(haftalikRollup(rdTmp, new Date("2026-10-12T18:00:00"))!, "utf8");
+  assert(rdMd.includes("Alt-ajan turları: 1"), "alt-ajan turu sayilir (K-0021)");
+  assert(rdMd.includes("Kabul kapsamı: 1 kayıt"), "kabul kapsami kayit sayisi");
+  assert(rdMd.includes("Önceki haftaya göre (2026-W41)"), "delta satiri onceki haftayi anar");
+  assert(rdMd.includes("tur +1") && rdMd.includes("kabul +50 puan") && rdMd.includes("cache-hit +10 puan"), "delta yon ve buyukluk dogru");
+  const rdJson = JSON.parse(fsp.readFileSync(rdTmp + "/raporlar/telemetri-haftalik/2026-W42.json", "utf8"));
+  assert(rdJson.altAjanTur === 1 && rdJson.kabulKayit === 1 && rdJson.delta.tur === 1 && rdJson.delta.kabulPuan === 50, "delta json makine-okunur");
+  fsp.rmSync(rdTmp, { recursive: true, force: true });
+
+  const rbTmp = fsp.mkdtempSync(os.tmpdir() + "/rollb-");
+  fsp.mkdirSync(rbTmp + "/.verimlilik", { recursive: true });
+  fsp.writeFileSync(rbTmp + "/.verimlilik/telemetri.jsonl", JSON.stringify({ ts: "2026-10-12T10:00:00Z", tip: "tur", agentId: "a", provider: "p" }) + "\n");
+  const rbMd = fsp.readFileSync(haftalikRollup(rbTmp, new Date("2026-10-12T18:00:00"))!, "utf8");
+  assert(rbMd.includes("baz hafta") && rbMd.includes("koşul oluşmadı"), "onceki hafta yoksa baz notu + kabul kosulu aciklamasi");
+  fsp.rmSync(rbTmp, { recursive: true, force: true });
+
+  // v0.12: bekci STATE_BOARD isaretcisi (K-0023 O2)
+  const { panoIsaretciYaz } = await import("../server/bekci");
+  const bpTmp = fsp.mkdtempSync(os.tmpdir() + "/pano-");
+  fsp.writeFileSync(bpTmp + "/STATE_BOARD.md", "# Pano\n\n## Aktif iş\nYok.\n", "utf8");
+  assert(panoIsaretciYaz(bpTmp, "2026-10-13") === true, "isaretci ilk yazimda eklenir");
+  const bp1 = fsp.readFileSync(bpTmp + "/STATE_BOARD.md", "utf8");
+  assert(bp1.includes("- bekci raporu: raporlar/takip-sozlesme/2026-10-13.md"), "isaretci Aktif is altina duser");
+  assert(panoIsaretciYaz(bpTmp, "2026-10-13") === false, "ayni gun idempotent");
+  panoIsaretciYaz(bpTmp, "2026-10-14");
+  const bp2 = fsp.readFileSync(bpTmp + "/STATE_BOARD.md", "utf8");
+  assert((bp2.match(/bekci raporu:/g) || []).length === 1 && bp2.includes("2026-10-14"), "yeni gun satiri kopyalamaz, gunceller");
+  fsp.rmSync(bpTmp, { recursive: true, force: true });
+
+  assert(CEKIRDEK.includes("okumadan-yazma kuralına tabi kalır"), "K-0023 O1: %90 maddesi kapsam yarim cumlesi tasir");
+
   const { katmanKokuBul, projeyiTara } = await import("../server/sozlesme");
   const wTmp = fsp.mkdtempSync(os.tmpdir() + "/walk-");
   fsp.mkdirSync(wTmp + "/proje/alt/derin", { recursive: true });

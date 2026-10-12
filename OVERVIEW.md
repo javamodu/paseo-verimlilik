@@ -16,7 +16,7 @@ Ajan verimlilik sözleşmesini (PASEO-VERIMLILIK-REHBERI ÇEKİRDEK v2.0) her ye
 - **Onboarding + echo kapısı:** L0/L1/L5 yoksa ilk-15-dakika iskeleti dürtmesi; handoff varsa ilk turda echo üçlüsü doğrulaması (eksikse tek dürtme).
 - **Yapılandırma (repo başına):** `.verimlilik/ayar.json` — `pitbullYaziciDk` (vars. 15), `pitbullOkuyucuDk` (vars. 20), `kapsamEsik` (vars. 3), `enjeksiyonMod` (`tam`/`isaretci`/`kapali`). Sınır dışı değerler reddedilir, bozuk dosya varsayılana düşer.
 - **İşaretçi modu:** kural sayısı >80 blokunda sessiz geçiş yerine 4 satırlık sözleşme özeti enjekte edilir (`kapali` modda tamamen susar); 20 KB bütçe aşımında enjeksiyona not satırı düşülür.
-- **Haftalık rollup:** her tur bitiminde kontrol — ISO haftası başına bir kez `.verimlilik/telemetri.jsonl` → `raporlar/telemetri-haftalik/<YYYY-Www>.md` mekanik özet (LLM'siz, idempotent).
+- **Haftalık rollup:** her tur bitiminde kontrol — ISO haftası başına bir kez `.verimlilik/telemetri.jsonl` → `raporlar/telemetri-haftalik/<YYYY-Www>.md` mekanik özet (LLM'siz, idempotent) — önceki-hafta deltası (tur/kabul/pitbull/cache-hit), kabul kapsamı satırı ve alt-ajan tur sayısı (parentAgentId) içerir (v0.12).
 - **Kabul / anlaşılmazlık sinyali:** edit'li tamamlanmış turdan sonra ret desenli kullanıcı mesajı önceki turu reddedilmiş sayar; karışıklık deseni (karışık/anlaşılmadı/net değil...) ayrı sayaca düşer (T — desen tabanlı yaklaşık ölçüm; Unicode-sınır güvenli).
 
 ## Neyi okur, neye müdahale eder

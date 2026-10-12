@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { PluginHookAgent } from "@getpaseo/plugin/server";
 import { katmanKokuBul } from "./sozlesme";
@@ -158,6 +158,7 @@ export function bekciTara(
       const baslik = mevcut.length === 0 ? "# Sozlesme bekci raporu — " + simdi.toISOString().slice(0, 10) + "\n\n" : "";
       appendFileSync(dosya, baslik + yeni.map((a) => "- " + saat + " | " + a.anahtar + " | " + a.detay).join("\n") + "\n", "utf8");
       ozet.bildirilen++;
+      panoIsaretciYaz(repoKok, simdi.toISOString().slice(0, 10));
       const repoAd = repoKok.replace(/.*[\\/]/, "");
       void gonder(
         agent,
@@ -170,6 +171,29 @@ export function bekciTara(
     }
   }
   return ozet;
+}
+
+
+const PANO_ISARET_ONEK = "- bekci raporu:";
+
+export function panoIsaretciYaz(repoKok: string, gun: string): boolean {
+  const panoYol = join(repoKok, "STATE_BOARD.md");
+  if (!existsSync(panoYol)) return false;
+  const isaretci = PANO_ISARET_ONEK + " raporlar/takip-sozlesme/" + gun + ".md (untracked — commit bekliyor)";
+  const icerik = readFileSync(panoYol, "utf8");
+  const eol = icerik.includes("\r\n") ? "\r\n" : "\n";
+  const satirlar = icerik.split(/\r?\n/);
+  const mevcutIdx = satirlar.findIndex((s) => s.startsWith(PANO_ISARET_ONEK));
+  if (mevcutIdx >= 0) {
+    if (satirlar[mevcutIdx] === isaretci) return false;
+    satirlar[mevcutIdx] = isaretci;
+  } else {
+    const aktifIdx = satirlar.findIndex((s) => s.trim() === "## Aktif iş");
+    if (aktifIdx < 0) return false;
+    satirlar.splice(aktifIdx + 1, 0, isaretci);
+  }
+  writeFileSync(panoYol, satirlar.join(eol), "utf8");
+  return true;
 }
 
 export function bekciBaslat(

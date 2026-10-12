@@ -15,7 +15,7 @@ Bu metin paseo-verimlilik plugin'i tarafından enjekte edildi. Tam sözleşme: P
 
 - ~%70 doluluk → yeni büyük iş alma; eldekini atomik, devredilebilir parçaya böl.
 - ~%80 → devir töreni başlat (aşağıda). Yeni iş kabul etme.
-- ~%90 → acil damga: ne varsa hemen dosyaya yaz, sonra konuş.
+- ~%90 → acil damga: ne varsa hemen dosyaya yaz, sonra konuş (durum dosyasına; kod yazımı okumadan-yazma kuralına tabi kalır).
 - Durum raporunun ilk satırı: "bağlam ~%XX".
 - Compact ancak STATE güncellendikten sonra; compact üstüne compact = döngü şüphesi → dur, raporla.
 - Cache dostu sıralama: sabit içerik başta, değişken sonda; sabit kısmı tur ortasında değiştirme (her değişiklik cache kırar = para).
