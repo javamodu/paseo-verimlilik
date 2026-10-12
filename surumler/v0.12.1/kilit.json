@@ -1,0 +1,10 @@
+{
+    "etiket":  "v0.12.1-kilit",
+    "tarih":  "2026-10-13",
+    "commit":  "e994f76",
+    "doctor":  null,
+    "hedefler":  null,
+    "eksenPuanlari":  null,
+    "ekOzet":  "zayif-brief tekrar dürtmesi kapandi",
+    "not":  "briefKontrol dedupe"
+}
