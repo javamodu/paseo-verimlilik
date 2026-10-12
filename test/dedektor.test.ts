@@ -199,7 +199,12 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
   onboardingTara("ob4", tmpBos);
   fsp.writeFileSync(tmpBos + "/AGENTS.md", "kurallar");
   obGiden = 0;
-  assert(await onboardingKontrol("ob4", tmpBos, "codex", echoEksik, obCtx) === false && obGiden === 0, "iskelet sonradan kurulduysa susar");
+  assert(await onboardingKontrol("ob4", tmpBos, "codex", echoEksik, obCtx) === true && obGiden === 1, "v0.8c2: tek katman yetmez (L1+L5 eksikse durtme surer)");
+  onboardingTara("ob5", tmpBos);
+  fsp.writeFileSync(tmpBos + "/STATE_BOARD.md", "durum");
+  fsp.writeFileSync(tmpBos + "/DERSLER.md", "dersler");
+  obGiden = 0;
+  assert(await onboardingKontrol("ob5", tmpBos, "codex", echoEksik, obCtx) === false && obGiden === 0, "uc katman kurulduysa susar");
   fsp.rmSync(tmp, { recursive: true, force: true });
   fsp.rmSync(tmpBos, { recursive: true, force: true });
 
@@ -318,6 +323,12 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
   gonderilen = 0;
   const shellYazmaKanitsiz = [userMsg("duzelt"), tc("exec", "shell", { command: "Set-Content a.ts x" }), asstMsg("Tamam, bitti.")];
   assert(await finishGateKontrol("t4", shellYazmaKanitsiz, mockContext) === true && gonderilen === 1, "shell-yazmali + kanitsiz turda finish-gate durtur");
+  gonderilen = 0;
+  const echoTestSahteKanit = [userMsg("duzelt"), tc("edit", "edit", { filePath: "a.ts" }), tc("exec", "shell", { command: "echo test", exitCode: 0 }), asstMsg("Bitti.")];
+  assert(await finishGateKontrol("t5", echoTestSahteKanit, mockContext) === true && gonderilen === 1, "v0.8c2: 'echo test' kanit sayilmaz (runner deseni)");
+  gonderilen = 0;
+  const typecheckKanit = [userMsg("duzelt"), tc("edit", "edit", { filePath: "a.ts" }), tc("exec", "shell", { command: "npx tsc --noEmit", exitCode: 0 }), asstMsg("Bitti.")];
+  assert(await finishGateKontrol("t6", typecheckKanit, mockContext) === false && gonderilen === 0, "v0.8c2: npx tsc kanit sayilir");
 
   const { basarisizOranMesaji, _testIcinKaliteSifirla } = await import("../server/kalite");
   const onCagri = (n: number, fail: number) => toolCallOzetleri(Array.from({ length: n }, (_, i) => tc("exec", "shell", { command: "k" + i, exitCode: i < fail ? 1 : 0 }, i < fail ? "failed" : "completed")));

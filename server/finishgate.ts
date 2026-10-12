@@ -3,7 +3,7 @@ import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
 import { editliMi, latestOutputText, sonKullaniciMesajiIndex, toolCallOzetleri } from "./inspect";
 
 const TAMAMLANMA_DESENI = /\b(tamam(landı|landi)?|bitti|hazır|hazir|geçti|gecti|başarılı|basarili|passed|done|complet(ed|e)|yeşil|yesil)\b/i;
-const DOGRULAMA_DESENI = /(test|lint|typecheck|tsc|build|saglik|verify|check|doctor|pytest|vitest|jest|mocha|cargo test|go test)/i;
+const DOGRULAMA_DESENI = /\b(npm\s+(run\s+)?(test|typecheck|lint|build)|npx\s+(tsc|vitest|jest|tsx\s+test)|pnpm\s+(test|typecheck|lint)|yarn\s+(test|build)|tsc\b|pytest|vitest|jest|mocha|cargo\s+test|go\s+test|dotnet\s+test|saglik\.ps1|zincir-kontrol\.ps1)/i;
 const MAKS_ARDISIK_DURTME = 2;
 
 const durum = new Map<string, number>();

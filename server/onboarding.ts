@@ -74,12 +74,13 @@ export async function onboardingKontrol(
   const l0 = existsSync(join(kok, "AGENTS.md")) || existsSync(join(kok, "ANAYASA.md"));
   const l1 = existsSync(join(kok, "STATE_BOARD.md"));
   const l5 = existsSync(join(kok, "DERSLER.md"));
-  if (l0 || l1 || l5) {
+  if (l0 && l1 && l5) {
     return false;
   }
+  const eksikler = [!l0 ? "L0(AGENTS.md)" : null, !l1 ? "L1(STATE_BOARD.md)" : null, !l5 ? "L5(DERSLER.md)" : null].filter(Boolean).join("+");
   telemetriYaz(cwd, { ts: new Date().toISOString(), tip: "lint", agentId, provider, detay: "iskelet-eksik" });
   await context.paseo.agents.ref(agentId).send(
-    "[paseo-verimlilik · onboarding] Bu projede L0/L1/L5 yok (rehber §9 ilk-15-dakika). " +
+    "[paseo-verimlilik · onboarding] Eksik katmanlar: " + eksikler + " (rehber §9 ilk-15-dakika). " +
     "Iskeleti kur: AGENTS.md (L0) + STATE_BOARD.md (L1) + DERSLER.md (L5) + plans/handoff/ + kararlar/ + raporlar/ dizinleri. 3 dosya + 3 dizin, 10 dakika.",
   );
   return true;
