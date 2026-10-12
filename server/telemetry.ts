@@ -4,6 +4,7 @@ import type { PluginHookAgent, PluginTurnOutcome } from "@getpaseo/plugin/server
 import type { AgentTimelineItem, AgentUsage } from "@getpaseo/protocol/agent-types";
 import { editCagrilari, turCagrilari } from "./inspect";
 import { katmanKokuBul } from "./sozlesme";
+import { PLUGIN_SURUM } from "./surum";
 import { haftalikRollup } from "./rollup";
 
 export interface TelemetriKayit {
@@ -23,6 +24,7 @@ export interface TelemetriKayit {
   finishGateDurtme?: boolean;
   kabul?: boolean;
   kabulSinyali?: string;
+  pluginSurum?: string;
   kuralToplam?: number;
   butceBytes?: number;
   detay?: string;
@@ -92,6 +94,7 @@ export function turKaydet(input: {
     tip: "tur",
     agentId: input.agent.id,
     provider: input.agent.provider,
+    pluginSurum: PLUGIN_SURUM,
     turnId: input.turnId,
     outcome: input.outcome.kind,
     turSayisi: turSayaclari.get(input.agent.id) ?? 1,

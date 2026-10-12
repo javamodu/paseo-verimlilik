@@ -118,7 +118,8 @@ assert(izinKarari("git stash list") === "allow", "git stash list allow");
 assert(izinKarari("git stash drop") === null, "git stash drop kullaniciya");
 assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (yanlis-pozitif yok)");
 
-  const aj = { id: "pb1", cwd: "D:/Vibecode/paseo-verimlilik", provider: "codex" } as never;
+  const pbTmp = fspM.mkdtempSync(osM.tmpdir() + "/pb-");
+  const aj = { id: "pb1", cwd: pbTmp, provider: "codex" } as never;
   const harita = new Map<string, never>([["pb1", aj]]);
   let giden = 0;
   const gonder = async () => { giden++; };
@@ -138,7 +139,7 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
   let r4 = pitbullTara(harita, gonder);
   assert(r4.dirtulen === 0, "tur bitince pitbull sifirlanir");
 
-  const aj2 = { id: "pb2", cwd: "D:/Vibecode/paseo-verimlilik", provider: "codex" } as never;
+  const aj2 = { id: "pb2", cwd: pbTmp, provider: "codex" } as never;
   harita.set("pb2", aj2);
   pitbullTurBasladi("pb2", Date.now() - 30 * 60_000);
   pitbullTurBitti("pb2", true);
@@ -150,7 +151,7 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
   assert(r5.dirtulen === 1, "16dk yazici stall: pitbull durtur (yazici esigi 15dk)");
 
   // v0.8c3: oturum durtme tavani (5) + bayat tur korumasi (24sa)
-  const aj3 = { id: "pb3", cwd: "D:/Vibecode/paseo-verimlilik", provider: "codex" } as never;
+  const aj3 = { id: "pb3", cwd: pbTmp, provider: "codex" } as never;
   const harita3 = new Map<string, never>([["pb3", aj3]]);
   pitbullTurBasladi("pb3", Date.now() - 21 * 60_000);
   let giden3 = 0;
@@ -161,13 +162,14 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
     pitbullTara(harita3, gonder3);
   }
   assert(giden3 === 5, "oturum tavani: 5 durtmeden sonra susar (giden=" + giden3 + ")");
-  const aj4 = { id: "pb4", cwd: "D:/Vibecode/paseo-verimlilik", provider: "codex" } as never;
+  const aj4 = { id: "pb4", cwd: pbTmp, provider: "codex" } as never;
   const harita4 = new Map<string, never>([["pb4", aj4]]);
   pitbullTurBasladi("pb4", Date.now() - 25 * 60 * 60_000);
   const rBayat = pitbullTara(harita4, async () => { throw new Error("olmamali"); });
   assert(rBayat.dirtulen === 0 && _testIcinDurumVer("pb4")!.turBaslangic === null, "bayat tur (25sa) durtme uretmez, sifirlanir");
   assert(sonMetin.includes("yazım kümesi sessiz"), "yazici durtmesi yazim-kumesi sinifini bildirir");
   harita.delete("pb2");
+  fspM.rmSync(pbTmp, { recursive: true, force: true });
 
 
   const { kapsamSay } = await import("../server/kapsam");
@@ -376,6 +378,22 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
   const bos = turCagrilari([tc("exec", "shell", { command: "ls", exitCode: 0 })]);
   assert(bos.length === 1, "kullanici mesaji yoksa tum timeline pencere sayilir");
   _testIcinKaliteSifirla();
+
+  // v0.8c5: tur kaydina pluginSurum damgasi + kilit drift bekçisi
+  const { PLUGIN_SURUM } = await import("../server/surum");
+  const { turKaydet, telemetriDosyasi } = await import("../server/telemetry");
+  const surTmp = fsp.mkdtempSync(os.tmpdir() + "/sur-");
+  turKaydet({ agent: { id: "s1", cwd: surTmp, provider: "codex" }, turnId: "t1", outcome: { kind: "completed" }, timeline: [], usage: null, loopDurtme: false, finishGateDurtme: false } as never);
+  const surSatir = fsp.readFileSync(telemetriDosyasi(surTmp), "utf8").trim().split("\n")[0];
+  const surKayit = JSON.parse(surSatir);
+  assert(surKayit.pluginSurum === PLUGIN_SURUM, "tur kaydi pluginSurum tasir: " + surKayit.pluginSurum);
+  assert(/^v\d+\.\d+/.test(PLUGIN_SURUM), "PLUGIN_SURUM semver biciminde: " + PLUGIN_SURUM);
+  try {
+    const { execSync } = await import("node:child_process");
+    const tag = execSync("git describe --tags --abbrev=0", { cwd: "D:/Vibecode/paseo-verimlilik", encoding: "utf8" }).trim().replace(/-kilit$/, "");
+    assert(tag === PLUGIN_SURUM, "PLUGIN_SURUM en yeni kilit ile uyumlu (drift bekçisi): " + tag);
+  } catch { console.log("uyari: git tag okunamadi, drift bekçisi atlandi"); }
+  fsp.rmSync(surTmp, { recursive: true, force: true });
 
   console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
   process.exit(hata === 0 ? 0 : 1);
