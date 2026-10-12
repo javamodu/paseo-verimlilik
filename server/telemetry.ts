@@ -28,6 +28,7 @@ export interface TelemetriKayit {
   pluginSurum?: string;
   rol?: string;
   model?: string;
+  mod?: string;
   inTok?: number;
   outTok?: number;
   cacheTok?: number;
@@ -80,6 +81,7 @@ export function turKaydet(input: {
   timeline: readonly AgentTimelineItem[];
   usage: AgentUsage | null;
   model?: string | null;
+  mod?: string | null;
   loopDurtme: boolean;
   finishGateDurtme: boolean;
 }): void {
@@ -105,6 +107,7 @@ export function turKaydet(input: {
     pluginSurum: PLUGIN_SURUM,
     rol: rolCoz(input.agent.title ?? null)?.ad,
     model: input.model ?? undefined,
+    mod: input.mod ?? undefined,
     inTok: usage?.inputTokens ?? undefined,
     outTok: usage?.outputTokens ?? undefined,
     cacheTok: usage?.cachedInputTokens ?? undefined,
@@ -165,12 +168,13 @@ export function telemetriOzetle(cwd: string): {
   dosya: string; tur: number; loopDurtme: number; finishGateDurtme: number;
   kabul: number; ret: number; kabulOrani: number | null; anlasilmazlik: number;
   inTok: number; outTok: number; cacheTok: number; ortTurSn: number | null;
-  modeller: Record<string, number>; maliyetUsd: number;
+  modeller: Record<string, number>; maliyetUsd: number; modlar: Record<string, number>;
 } {
   const dosya = telemetriDosyasi(cwd);
   let tur = 0, loopDurtme = 0, finishGateDurtme = 0, kabul = 0, ret = 0, anlasilmazlik = 0;
   let inTok = 0, outTok = 0, cacheTok = 0, turSnToplam = 0, turSnAdet = 0, maliyetToplam = 0;
   const modeller: Record<string, number> = {};
+  const modlar: Record<string, number> = {};
   if (existsSync(dosya)) {
     for (const satir of readFileSync(dosya, "utf8").split(/\r?\n/)) {
       if (!satir.trim()) continue;
@@ -184,6 +188,7 @@ export function telemetriOzetle(cwd: string): {
           maliyetToplam += kayit.maliyetUsd ?? 0;
           if (typeof kayit.turSn === "number") { turSnToplam += kayit.turSn; turSnAdet++; }
           if (kayit.model) modeller[kayit.model] = (modeller[kayit.model] ?? 0) + 1;
+          if (kayit.mod) modlar[kayit.mod] = (modlar[kayit.mod] ?? 0) + 1;
         }
         if (kayit.loopDurtme) loopDurtme++;
         if (kayit.finishGateDurtme) finishGateDurtme++;
@@ -205,5 +210,6 @@ export function telemetriOzetle(cwd: string): {
     ortTurSn: turSnAdet > 0 ? Math.round(turSnToplam / turSnAdet) : null,
     modeller,
     maliyetUsd: Math.round(maliyetToplam * 10000) / 10000,
+    modlar,
   };
 }

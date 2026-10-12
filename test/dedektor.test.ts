@@ -530,6 +530,65 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
     fsp.rmSync(tokTmp, { recursive: true, force: true });
   }
 
+  
+  // v0.11 (K-0018): provider-modlar
+  {
+    const { modCoz, aktifModYaz, aktifModOku, modAyarla: ma2, contextRotOrani, rotDurtmeliMi, MODLAR } = await import("../server/modlar");
+    const mTmp = fsp.mkdtempSync(os.tmpdir() + "/mod11-");
+    // eslesme: kimi -> atolye
+    const m1 = modCoz(mTmp, "codex", "kimi-K3-ultra");
+    assert(m1?.ad === "atolye", "kimi eslesmesi atolye: " + m1?.ad);
+    // eslesme yok -> null
+    assert(modCoz(mTmp, "qoder", "qwen3.8") === null, "eslesme yoksa null");
+    // aktif override eslemeyi ezer
+    aktifModYaz(mTmp, "cerrah");
+    assert(modCoz(mTmp, "codex", "kimi-K3")?.ad === "cerrah", "aktif mod eslemeyi ezer");
+    assert(aktifModOku(mTmp) === "cerrah", "disk state okunur");
+    // serbest: notr ama kayitli
+    aktifModYaz(mTmp, "serbest");
+    const ms = modCoz(mTmp, "codex", "kimi-K3");
+    assert(ms?.ad === "serbest" && ms.sistemEki === "" && ms.thinking === null, "serbest notr: " + JSON.stringify(ms));
+    // sifirla
+    aktifModYaz(mTmp, null);
+    assert(aktifModOku(mTmp) === null, "sifirla state temizler");
+    // ayar.json ek-listesi
+    const ma = ma2(mTmp, "matbaa", "qoder", "qwen");
+    assert(ma.ok, "modAyarla ok: " + ma.mesaj);
+    assert(modCoz(mTmp, "qoder", "qwen3.8-flash")?.ad === "matbaa", "ayar.json eslesmesi calisir (aktif matbaa ile ayni)");
+    aktifModYaz(mTmp, null);
+    assert(modCoz(mTmp, "codex", "kimi")?.ad === "atolye", "sifirlama sonrasi varsayilan eslesme korunur");
+    assert(modCoz(mTmp, "qoder", "qwen3.8-flash")?.ad === "matbaa", "sifirlama sonrasi ayar eslesmesi korunur");
+    // kotu regex patlamaz (ayri tmp — ayar.json ezmeyi testten izole et)
+    const rTmp = fsp.mkdtempSync(os.tmpdir() + "/modre-");
+    fsp.mkdirSync(rTmp + "/.verimlilik", { recursive: true });
+    fsp.writeFileSync(rTmp + "/.verimlilik/ayar.json", JSON.stringify({ modlar: { eslesmeler: [{ provider: "x", modelDeseni: "[", mod: "atolye" }] } }));
+    assert(modCoz(rTmp, "x", "herhangi") === null, "kotu regex eslesmez, patlamaz");
+    fsp.rmSync(rTmp, { recursive: true, force: true });
+    // bilinmeyen mod reddedilir
+    assert(ma2(mTmp, "bilinmeyen").ok === false, "bilinmeyen mod red");
+    // context rot
+    assert(contextRotOrani(null) === null, "usage yoksa oran null");
+    assert(Math.abs((contextRotOrani({ contextWindowUsedTokens: 80, contextWindowMaxTokens: 100 } as never) ?? 0) - 0.8) < 0.001, "oran 0.8");
+    // rot cooldown: ilk durtme gecer, ikincisi 30dk icinde susar
+    assert(rotDurtmeliMi("rot-test", 100000) === true, "ilk durtme gecer");
+    assert(rotDurtmeliMi("rot-test", 100000 + 60000) === false, "cooldown icinde susar");
+    assert(rotDurtmeliMi("rot-test", 100000 + 31 * 60 * 1000) === true, "cooldown sonrasi tekrar durtur");
+    // mod tanimlari butunlugu
+    assert(MODLAR.atolye.paralellik === 6 && MODLAR.matbaa.thinking === "high" && MODLAR.cerrah.thinking === "low", "mod tanimlari K-0018'e uygun");
+    fsp.rmSync(mTmp, { recursive: true, force: true });
+  }
+  // v0.11: telemetri mod alani + ozet modlar sayaci
+  {
+    const { turKaydet: tk3, telemetriOzetle: to3 } = await import("../server/telemetry");
+    const mmTmp = fsp.mkdtempSync(os.tmpdir() + "/modtel-");
+    tk3({ agent: { id: "m1", cwd: mmTmp, provider: "codex" }, turnId: "t1", outcome: { kind: "completed" }, timeline: [], usage: null, model: "kimi-K3", mod: "atolye", loopDurtme: false, finishGateDurtme: false } as never);
+    tk3({ agent: { id: "m2", cwd: mmTmp, provider: "codex" }, turnId: "t2", outcome: { kind: "completed" }, timeline: [], usage: null, model: null, mod: null, loopDurtme: false, finishGateDurtme: false } as never);
+    const mo = to3(mmTmp);
+    assert(mo.modlar.atolye === 1, "ozet mod sayaci: " + JSON.stringify(mo.modlar));
+    assert(Object.keys(mo.modlar).length === 1, "modsuz tur sayilmaz");
+    fsp.rmSync(mmTmp, { recursive: true, force: true });
+  }
+
   console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
   process.exit(hata === 0 ? 0 : 1);
 })();

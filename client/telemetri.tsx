@@ -43,6 +43,11 @@ export function TelemetriEkrani({ theme, layout, params }: PluginScreenProps) {
           </Text>
           <Text style={styles.deger}>Ort. tur: {data.ortTurSn === null ? "henüz veri yok" : data.ortTurSn + "sn"}</Text>
           <Text style={styles.deger}>Maliyet: {data.maliyetUsd > 0 ? "~$" + data.maliyetUsd.toFixed(4) : "veri yok"}</Text>
+          {Object.keys(data.modlar).length > 0 && (
+            <Text style={styles.deger}>
+              Modlar: {Object.entries(data.modlar).map(([m, n]) => m + " x" + n).join(" · ")}
+            </Text>
+          )}
           {Object.keys(data.modeller).length > 0 && (
             <Text style={styles.deger}>
               Modeller: {Object.entries(data.modeller).map(([m, n]) => m + " x" + n).join(" · ")}

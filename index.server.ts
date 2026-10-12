@@ -2,7 +2,7 @@ import type { PluginServerContext } from "@getpaseo/plugin/server";
 import type { PluginHookAgent } from "@getpaseo/plugin/server";
 import type { PaseoApi } from "@getpaseo/client";
 import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
-import { sozlesmeEnjekte, telemetriOzet, sonDegerlendirme } from "./shared/contracts";
+import { sozlesmeEnjekte, telemetriOzet, sonDegerlendirme, modDurum, modAyarla } from "./shared/contracts";
 import { enjeksiyonMetni } from "./server/sozlesme";
 import { kabulKaydet, karisiklikKaydet, lintKaydet, telemetriOzetle, turBaslat, turKaydet } from "./server/telemetry";
 import { loopKontrol } from "./server/loopguard";
@@ -20,6 +20,7 @@ import { editliMi, turCagrilari } from "./server/inspect";
 import { KARISIKLIK_DESENI, RET_DESENI } from "./server/desenler";
 import { sonDegerlendirmeOku } from "./server/degerlendirme";
 import { basarisizOranMesaji } from "./server/kalite";
+import { modCoz, modDurumOku, modAyarla as modAyarlaUygula, contextRotOrani, rotDurtmeliMi } from "./server/modlar";
 
 
 interface TurState {
@@ -59,9 +60,11 @@ export default function contribute(server: PluginServerContext) {
       }
       const mevcut = request.config.systemPrompt ?? "";
       const rol = rolCoz(request.config.title ?? null);
+      const mod = modCoz(request.config.cwd, request.config.provider, request.config.model ?? null);
+      const ekler = [rol?.sistemEki, mod?.sistemEki].filter((e): e is string => !!e);
       let sonuc;
       try {
-        sonuc = enjeksiyonMetni(request.config.cwd, mevcut, rol?.sistemEki ?? null);
+        sonuc = enjeksiyonMetni(request.config.cwd, mevcut, ekler.length > 0 ? ekler.join("\n") : null);
       } catch (error) {
         console.error("[paseo-verimlilik] enjeksiyon hatasi (dokunulmadi)", error);
         return undefined;
@@ -78,6 +81,7 @@ export default function contribute(server: PluginServerContext) {
       }
       const yeniConfig = { ...request.config, systemPrompt: sonuc.metin };
       if (rol?.modeId && !yeniConfig.modeId) yeniConfig.modeId = rol.modeId;
+      if (mod?.thinking && !yeniConfig.thinkingOptionId) yeniConfig.thinkingOptionId = mod.thinking;
       return { ...request, config: yeniConfig };
     }),
   );
@@ -154,6 +158,7 @@ export default function contribute(server: PluginServerContext) {
       } catch {
         // usage alinamazsa null kalir
       }
+      const modBilgi = modCoz(event.agent.cwd, event.agent.provider, model);
       turKaydet({
         agent: event.agent,
         turnId: event.turnId,
@@ -161,9 +166,16 @@ export default function contribute(server: PluginServerContext) {
         timeline: event.timeline,
         usage,
         model,
+        mod: modBilgi?.ad ?? null,
         loopDurtme,
         finishGateDurtme,
       });
+      if (modBilgi?.ad === "atolye") {
+        const oran = contextRotOrani(usage);
+        if (oran !== null && oran >= 0.8 && rotDurtmeliMi(agentId, Date.now())) {
+          gonderAjana(event.agent, "[paseo-verimlilik · context-rot] Bağlam penceresi %" + Math.round(oran * 100) + " dolu (ATÖLYE freni) — yeni turda taze oturum önerilir.").catch((e) => console.error("[paseo-verimlilik] rot durtme hatasi", e));
+        }
+      }
     }),
   );
 
@@ -192,6 +204,8 @@ export default function contribute(server: PluginServerContext) {
 
   server.handle(sozlesmeEnjekte, enjekteHandler);
   server.handle(telemetriOzet, ({ cwd }) => telemetriOzetle(cwd));
+  server.handle(modDurum, ({ cwd }) => modDurumOku(cwd));
+  server.handle(modAyarla, ({ cwd, mod, provider, model }) => modAyarlaUygula(cwd, mod, provider, model));
   server.handle(sonDegerlendirme, ({ cwd }) => sonDegerlendirmeOku(cwd));
 
   return () => {

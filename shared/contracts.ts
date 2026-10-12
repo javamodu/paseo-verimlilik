@@ -33,7 +33,29 @@ export const telemetriOzet = defineRpc({
     ortTurSn: z.number().nullable(),
     modeller: z.record(z.string(), z.number()),
     maliyetUsd: z.number(),
+    modlar: z.record(z.string(), z.number()),
   }),
+});
+
+export const modDurum = defineRpc({
+  name: "mod.durum",
+  input: z.object({ cwd: z.string() }),
+  output: z.object({
+    aktif: z.string().nullable(),
+    eslesmeler: z.array(z.object({ provider: z.string(), modelDeseni: z.string(), mod: z.string() })),
+    modlar: z.array(z.string()),
+  }),
+});
+
+export const modAyarla = defineRpc({
+  name: "mod.ayarla",
+  input: z.object({
+    cwd: z.string(),
+    mod: z.string(),
+    provider: z.string().optional(),
+    model: z.string().optional(),
+  }),
+  output: z.object({ ok: z.boolean(), mesaj: z.string() }),
 });
 
 export const sonDegerlendirme = defineRpc({
