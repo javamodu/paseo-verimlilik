@@ -73,6 +73,22 @@ void (async () => {
   assert(izinKarari("npm install") === null, "npm install dokunma (kullaniciya)");
   assert(izinKarari(null) === null, "shell-disina dokunma");
 
+// v0.8a: yazici secenek/alt-komut daraltmasi (P0 review bulgusu)
+assert(izinKarari("git branch -D deneme") === null, "git branch -D kullaniciya birakilir");
+assert(izinKarari("git branch -m eski yeni") === null, "git branch -m kullaniciya");
+assert(izinKarari("git branch yeni-dal") === null, "dal olusturma kullaniciya");
+assert(izinKarari("git branch") === "allow", "git branch allow");
+assert(izinKarari("git branch -a -v") === "allow", "git branch -a -v allow");
+assert(izinKarari("git branch --list feat") === "allow", "git branch --list allow");
+assert(izinKarari("npm audit fix") === null, "npm audit fix kullaniciya");
+assert(izinKarari("npm audit") === "allow", "npm audit allow");
+assert(izinKarari("npm audit --json") === "allow", "npm audit --json allow");
+assert(izinKarari("git remote -v") === "allow", "git remote -v allow");
+assert(izinKarari("git remote add origin x") === null, "git remote add kullaniciya");
+assert(izinKarari("git stash list") === "allow", "git stash list allow");
+assert(izinKarari("git stash drop") === null, "git stash drop kullaniciya");
+assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (yanlis-pozitif yok)");
+
   const aj = { id: "pb1", cwd: "D:/Vibecode/paseo-verimlilik", provider: "codex" } as never;
   const harita = new Map<string, never>([["pb1", aj]]);
   let giden = 0;
