@@ -108,8 +108,8 @@ export function pitbullTara(
     void gonder(
       agent,
       yaziciModu
-        ? "[paseo-verimlilik · pitbull] Tur " + Math.round(stallSuresi / 60) + " dakikadır açık ve yazım kümesi sessiz (önceki tur editliydi) — sessiz ölüm şüphesi. 2 satır durum raporu (ilk satır bağlam yüzdesi) + kaldığın yerden devam veya blokajı yaz. 2. ardışık dürtmede dur (§7.6)."
-        : "[paseo-verimlilik · pitbull] Tur " + Math.round(stallSuresi / 60) + " dakikadır açık — takıldıysan: 2 satır durum raporu (ilk satır bağlam yüzdesi) + kaldığın yerden devam. Aynı konuda 2. ardışık dürtmede dur ve kullanıcı işareti bekle (rehber §7.6).",
+        ? "[paseo-verimlilik · pitbull] Tur " + Math.round(stallSuresi / 60000) + " dakikadır açık ve yazım kümesi sessiz (önceki tur editliydi) — sessiz ölüm şüphesi. 2 satır durum raporu (ilk satır bağlam yüzdesi) + kaldığın yerden devam veya blokajı yaz. 2. ardışık dürtmede dur (§7.6)."
+        : "[paseo-verimlilik · pitbull] Tur " + Math.round(stallSuresi / 60000) + " dakikadır açık — takıldıysan: 2 satır durum raporu (ilk satır bağlam yüzdesi) + kaldığın yerden devam. Aynı konuda 2. ardışık dürtmede dur ve kullanıcı işareti bekle (rehber §7.6).",
     ).catch((error) => console.error("[paseo-verimlilik] pitbull gonderim hatasi", error));
   }
   return { dirtulen, insanKapisi };

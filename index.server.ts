@@ -122,8 +122,16 @@ export default function contribute(server: PluginServerContext) {
       let modBilgi: ReturnType<typeof modCoz> = null;
       try {
         aktifTurler.delete(agentId);
-        const ozetlerTur = turCagrilari(event.timeline);
-        const editliTur = editliMi(ozetlerTur);
+        // K-fix: ozetleme hatasi pitbullTurBitti'yi atlayamaz — aksi halde abort/canceled turda
+        // turBaslangic acik kalir ve pitbull sahte "takilma" durtmesi uretir.
+        let ozetlerTur: ReturnType<typeof turCagrilari> = [];
+        let editliTur = false;
+        try {
+          ozetlerTur = turCagrilari(event.timeline);
+          editliTur = editliMi(ozetlerTur);
+        } catch (ozetHata) {
+          console.error("[paseo-verimlilik] tur ozetleme hatasi (tur yine kapanir)", ozetHata);
+        }
         pitbullTurBitti(agentId, editliTur);
       try {
         if (event.outcome.kind === "completed") {

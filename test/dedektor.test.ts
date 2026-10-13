@@ -122,7 +122,8 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
   const aj = { id: "pb1", cwd: pbTmp, provider: "qoder" } as never; // R3-01: codex provider artik null-modelde firtina (8dk) — varsayilan esik testi eslesmesiz provider kullanir
   const harita = new Map<string, never>([["pb1", aj]]);
   let giden = 0;
-  const gonder = async () => { giden++; };
+  let sonPitbullMesaj = "";
+  const gonder = async (_a: unknown, mesaj?: string) => { giden++; sonPitbullMesaj = mesaj || ""; };
   pitbullTurBasladi("pb1");
   let r1 = pitbullTara(harita, gonder);
   assert(r1.dirtulen === 0 && giden === 0, "yeni tur: pitbull susar");
@@ -133,6 +134,8 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
   pitbullTurBasladi("pb1", Date.now() - 21 * 60_000);
   let r2b = pitbullTara(harita, gonder);
   assert(r2b.dirtulen === 1 && giden === 1, "21dk okuyucu stall: pitbull durtur");
+  // K-fix: dakika metni birim dogrulamasi — stallSuresi ms, mesaj gercek dakika gostermeli (regresyon: /60 yazilip ms->saniye varsayilmisti)
+  assert(sonPitbullMesaj.includes("21 dakikadır"), "21dk stall mesaji '21 dakikadır' demeli, gelen: " + sonPitbullMesaj);
   let r3 = pitbullTara(harita, gonder);
   assert(r3.dirtulen === 0 && giden === 1, "cooldown icinde ikinci durtme yok");
   pitbullTurBitti("pb1");
