@@ -20,6 +20,7 @@ export function takilmaEsigiMs(modAd: string | null | undefined, yaziciMi = true
 
 interface PitbullState {
   turBaslangic: number | null;
+  sonAktivite: number | null;
   ardisikStall: number;
   sonDurtme: number;
   sonTurEditliydi: boolean;
@@ -37,7 +38,7 @@ const PLUGIN_BASLANGIC = Date.now();
 function stateAl(agentId: string): PitbullState {
   let s = durum.get(agentId);
   if (!s) {
-    s = { turBaslangic: null, ardisikStall: 0, sonDurtme: PLUGIN_BASLANGIC, sonTurEditliydi: false, toplamDurtme: 0 };
+    s = { turBaslangic: null, sonAktivite: null, ardisikStall: 0, sonDurtme: PLUGIN_BASLANGIC, sonTurEditliydi: false, toplamDurtme: 0 };
     durum.set(agentId, s);
   }
   return s;
@@ -45,12 +46,24 @@ function stateAl(agentId: string): PitbullState {
 
 export function pitbullTurBasladi(agentId: string, simdi?: number): void {
   const s = stateAl(agentId);
-  s.turBaslangic = simdi ?? Date.now();
+  const t = simdi ?? Date.now();
+  s.turBaslangic = t;
+  s.sonAktivite = t;
+}
+
+// K-0033: tur-ici timeline olayi kalp atisi — stall artik tur suresi degil, son aktiviteden beri gecen sure.
+// Tur acikken timeline aboneligi (index.server.ts) her yeni ogende bunu cagirir; boylece uzun ama
+// aktif turlar (npm test, remotion still, coklu kapi) sahte 'tikilma' durtmesi uretmez.
+export function pitbullAktivite(agentId: string, simdi?: number): void {
+  const s = durum.get(agentId);
+  if (!s || s.turBaslangic === null) return;
+  s.sonAktivite = simdi ?? Date.now();
 }
 
 export function pitbullTurBitti(agentId: string, editliMi = false): void {
   const s = stateAl(agentId);
   s.turBaslangic = null;
+  s.sonAktivite = null;
   s.ardisikStall = 0;
   s.sonTurEditliydi = editliMi;
 }
@@ -73,7 +86,8 @@ export function pitbullTara(
       continue;
     }
     if (s.toplamDurtme >= MAKS_OTURUM_DURTME) continue;
-    const stallSuresi = simdi - s.turBaslangic;
+    const referans = s.sonAktivite ?? s.turBaslangic;
+    const stallSuresi = simdi - referans;
     const yaziciModu = s.sonTurEditliydi;
     const ayar = ayarOku(agent.cwd);
     const modAd = (modCoz(agent.cwd, agent.provider, null)?.ad ?? null) as string | null;
@@ -108,8 +122,8 @@ export function pitbullTara(
     void gonder(
       agent,
       yaziciModu
-        ? "[paseo-verimlilik · pitbull] Tur " + Math.round(stallSuresi / 60000) + " dakikadır açık ve yazım kümesi sessiz (önceki tur editliydi) — sessiz ölüm şüphesi. 2 satır durum raporu (ilk satır bağlam yüzdesi) + kaldığın yerden devam veya blokajı yaz. 2. ardışık dürtmede dur (§7.6)."
-        : "[paseo-verimlilik · pitbull] Tur " + Math.round(stallSuresi / 60000) + " dakikadır açık — takıldıysan: 2 satır durum raporu (ilk satır bağlam yüzdesi) + kaldığın yerden devam. Aynı konuda 2. ardışık dürtmede dur ve kullanıcı işareti bekle (rehber §7.6).",
+        ? "[paseo-verimlilik · pitbull] Tur " + Math.round(stallSuresi / 60000) + " dakikadır aktivitesiz ve yazım kümesi sessiz (önceki tur editliydi) — sessiz ölüm şüphesi. 2 satır durum raporu (ilk satır bağlam yüzdesi) + kaldığın yerden devam veya blokajı yaz. 2. ardışık dürtmede dur (§7.6)."
+        : "[paseo-verimlilik · pitbull] Tur " + Math.round(stallSuresi / 60000) + " dakikadır aktivitesiz — takıldıysan: 2 satır durum raporu (ilk satır bağlam yüzdesi) + kaldığın yerden devam. Aynı konuda 2. ardışık dürtmede dur ve kullanıcı işareti bekle (rehber §7.6).",
     ).catch((error) => console.error("[paseo-verimlilik] pitbull gonderim hatasi", error));
   }
   return { dirtulen, insanKapisi };

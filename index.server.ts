@@ -8,7 +8,7 @@ import { kabulKaydet, karisiklikKaydet, lintKaydet, telemetriOzetle, turBaslat, 
 import { loopKontrol } from "./server/loopguard";
 import { finishGateKontrol } from "./server/finishgate";
 import { permissionKontrol } from "./server/permission";
-import { pitbullBaslat, pitbullTurBasladi, pitbullTurBitti } from "./server/pitbull";
+import { pitbullAktivite, pitbullBaslat, pitbullTurBasladi, pitbullTurBitti } from "./server/pitbull";
 import { bekciBaslat } from "./server/bekci";
 import { rolCoz, rolIzinKontrol } from "./server/roller";
 import { katmanKokuBul } from "./server/sozlesme";
@@ -43,6 +43,7 @@ export default function contribute(server: PluginServerContext) {
   const removers: Array<() => void> = [];
   const aktifAjanlar = new Map<string, PluginHookAgent>();
   const aktifTurler = new Map<string, string>();
+  const aktiviteAbonelikleri = new Map<string, (() => void) & { ready: Promise<void> }>();
 
   const gonderAjana = async (agent: PluginHookAgent, mesaj: string) => {
     if (!paseoRef) return;
@@ -107,6 +108,21 @@ export default function contribute(server: PluginServerContext) {
       turBaslat(event.agent.id, event.agent.cwd);
       pitbullTurBasladi(event.agent.id);
       aktifTurler.set(event.agent.id, event.agent.cwd);
+      // K-0033: tur-ici aktivite kalbi — pitbull stall'i tur suresi degil, son timeline olayindan olculur.
+      try {
+        const oncekiAbone = aktiviteAbonelikleri.get(event.agent.id);
+        if (oncekiAbone) { aktiviteAbonelikleri.delete(event.agent.id); oncekiAbone(); }
+        const aboneAgentId = event.agent.id;
+        const abonelik = context.paseo.agents.ref(aboneAgentId).timeline.subscribe((olay) => {
+          if (olay && "event" in olay && olay.event && (olay.event as { type?: string }).type === "timeline") {
+            pitbullAktivite(aboneAgentId);
+          }
+        });
+        abonelik.ready.catch(() => undefined);
+        aktiviteAbonelikleri.set(aboneAgentId, abonelik);
+      } catch (error) {
+        console.error("[paseo-verimlilik] pitbull aktivite aboneligi kurulamadi", error);
+      }
     }),
   );
 
@@ -122,6 +138,8 @@ export default function contribute(server: PluginServerContext) {
       let modBilgi: ReturnType<typeof modCoz> = null;
       try {
         aktifTurler.delete(agentId);
+        const kapananAbone = aktiviteAbonelikleri.get(agentId);
+        if (kapananAbone) { aktiviteAbonelikleri.delete(agentId); try { kapananAbone(); } catch { /* abonelik zaten kopuk olabilir */ } }
         // K-fix: ozetleme hatasi pitbullTurBitti'yi atlayamaz — aksi halde abort/canceled turda
         // turBaslangic acik kalir ve pitbull sahte "takilma" durtmesi uretir.
         let ozetlerTur: ReturnType<typeof turCagrilari> = [];
@@ -223,6 +241,8 @@ export default function contribute(server: PluginServerContext) {
       aktifAjanlar.delete(event.agent.id);
       aktifTurler.delete(event.agent.id);
       turDurumu.delete(event.agent.id);
+      const kapananAbone2 = aktiviteAbonelikleri.get(event.agent.id);
+      if (kapananAbone2) { aktiviteAbonelikleri.delete(event.agent.id); try { kapananAbone2(); } catch { /* abonelik zaten kopuk olabilir */ } }
       ajanTemizleHepsi(event.agent.id);
     }),
   );
