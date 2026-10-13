@@ -7,9 +7,8 @@ export function latestOutputText(timeline: readonly AgentTimelineItem[]): string
       output = "";
     } else if ("text" in item && typeof item.text === "string") {
       output += item.text;
-    } else {
-      output += JSON.stringify(item) + "\n";
     }
+    // K-0028 (A2-7): tool_call JSON'u ciktiya katilmaz — status:"completed" gibi alanlar TAMAMLANMA_DESENI'nde yanlis-pozitif uretiyordu.
   }
   return output;
 }

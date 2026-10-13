@@ -93,7 +93,7 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
     "- Kabul oranı: " + oran + " (desen tabanlı, T)",
     "- Dürtmeler: loop " + loop + " · finish-gate " + fg + " · pitbull " + pitbull,
     "- Anlaşılmazlık: " + karisiklik,
-    "- Ort. cache-hit (token-ağırlıklı): " + (ortCache !== null ? "%" + ortCache : "—"),
+    "- Ort. cache-hit (token-ağırlıklı): " + (ortCache !== null ? "%" + ortCache : "—") + " — formül: Σ(cacheHitPct×in) / Σ(in); in yoksa ağırlık=1 (K-0028, A4-1)",
     "- Alt-ajan turları: " + altAjanTur + (altAjanTur === 0 ? " (harness spawn'ları bu sayıma girmez — REHBER §8)" : ""),
     "- Kabul kapsamı: " + kabulKapsam,
     deltaSatir,

@@ -1,5 +1,5 @@
 import { mkdirSync, appendFileSync, readFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import type { PluginHookAgent, PluginTurnOutcome } from "@getpaseo/plugin/server";
 import type { AgentTimelineItem, AgentUsage } from "@getpaseo/protocol/agent-types";
 import { editCagrilari, turCagrilari } from "./inspect";
@@ -57,7 +57,8 @@ export function telemetriDosyasi(cwd: string): string {
 export function telemetriYaz(cwd: string, kayit: TelemetriKayit): void {
   try {
     const dosya = telemetriDosyasi(cwd);
-    mkdirSync(join(cwd, ".verimlilik"), { recursive: true });
+    // K-0028 (A2-4): mkdir hedef dosyanin dizininde — alt-dizin cwd'sinde kok .verimlilik yoksa kayit sessizce dusuyordu.
+    mkdirSync(dirname(dosya), { recursive: true });
     appendFileSync(dosya, JSON.stringify(kayit) + "\n", "utf8");
   } catch (error) {
     console.error("[paseo-verimlilik] telemetri yazim hatasi", error);

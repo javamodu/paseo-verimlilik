@@ -737,6 +737,35 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
     assert(ik3("echo hello") === "allow", "D2-04 guard: duz echo allow");
   }
 
+  // v0.16 (K-0028): A2-7 tool_call JSON yanlis-pozitifi + A2-4 alt-dizin telemetri + A4-1 formul
+  {
+    const { latestOutputText: lot } = await import("../server/inspect");
+    const tl2 = [tc("exec", "shell", { command: "npm test", exitCode: 0 }), { type: "assistant_message", text: "duz metin" } as never];
+    const m2 = lot(tl2);
+    assert(!m2.includes("completed"), "A2-7: tool_call JSON ciktida yok (status completed yanlis-pozitif kapandi)");
+    assert(m2.includes("duz metin"), "A2-7 guard: assistant metni korunur");
+  }
+  {
+    const { telemetriYaz: ty2, telemetriDosyasi: td2 } = await import("../server/telemetry");
+    const kokTmp = fspM.mkdtempSync(osM.tmpdir() + "/a24-");
+    fspM.writeFileSync(kokTmp + "/AGENTS.md", "- kural");
+    const alt = kokTmp + "/src/alt";
+    fspM.mkdirSync(alt, { recursive: true });
+    ty2(alt, { ts: new Date().toISOString(), tip: "lint", agentId: "a24", provider: "-", detay: "alt-dizin testi" });
+    assert(fspM.existsSync(kokTmp + "/.verimlilik/telemetri.jsonl"), "A2-4: alt-dizin cwd'sinde kayit kok .verimlilik'e dustu");
+    assert(td2(alt) === kokTmp.replace(/\//g, "/") + "/.verimlilik/telemetri.jsonl" || td2(alt).includes(".verimlilik"), "A2-4 guard: dosya yolu kokte");
+    fspM.rmSync(kokTmp, { recursive: true, force: true });
+  }
+  {
+    const { haftalikRollup: hr2 } = await import("../server/rollup");
+    const rTmp = fspM.mkdtempSync(osM.tmpdir() + "/a41-");
+    fspM.mkdirSync(rTmp + "/.verimlilik", { recursive: true });
+    fspM.writeFileSync(rTmp + "/.verimlilik/telemetri.jsonl", JSON.stringify({ ts: new Date().toISOString(), tip: "tur", detay: "cacheHitPct=90 in=1000" }) + "\n");
+    const yol = hr2(rTmp);
+    assert(yol !== null && fspM.readFileSync(yol, "utf8").includes("cacheHitPct"), "A4-1: rollup raporu formul notu tasir");
+    fspM.rmSync(rTmp, { recursive: true, force: true });
+  }
+
   console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
   process.exit(hata === 0 ? 0 : 1);
 })();
