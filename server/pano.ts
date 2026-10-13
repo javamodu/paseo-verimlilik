@@ -2,6 +2,7 @@ import http from "node:http";
 import { readFileSync, existsSync, statSync } from "node:fs";
 import { join, extname, normalize, sep } from "node:path";
 import type { PaseoApi } from "@getpaseo/client";
+import { derle, repolariBul, izinliDizinleriOku, emirlerOku, planMdOku, planMdYaz, birlestir, emirlerYaz, mdHash } from "./planmd";
 
 // K-0019/K-0020 koprüsu: paseo-pano vanilla yuzeyini plugin subprocess'inden servis eder.
 // Bagimliliksiz node:http, yalniz 127.0.0.1, POST'lar PANO_TOKEN fail-closed.
@@ -151,6 +152,32 @@ export function panoBaslat(getPaseo: () => PaseoApi | null): { durum: () => Pano
       await paseo.agents.ref(agentId).archive();
       return { ok: true };
     }
+    if (eylem === "plan-kaydet") {
+      const repoAd = String(emir.repo ?? "");
+      const md = String(emir.md ?? "");
+      const kokler = (process.env.PANO_KOKLER ?? "D:\\Vibecode").split(";");
+      const repo = repolariBul(kokler).find((r) => r.ad === repoAd);
+      if (!repo) return { ok: false, mesaj: "repo yok: " + repoAd };
+      if (!md.trim()) return { ok: false, mesaj: "bos plan kaydedilmez" };
+      planMdYaz(repo.yol, md);
+      return { ok: true, mesaj: "plan.md kaydedildi (" + md.length + " bayt)" };
+    }
+    if (eylem === "plan-derle" || eylem === "plan-uygula") {
+      const repoAd = String(emir.repo ?? "");
+      const kokler = (process.env.PANO_KOKLER ?? "D:\\Vibecode").split(";");
+      const repo = repolariBul(kokler).find((r) => r.ad === repoAd);
+      if (!repo) return { ok: false, mesaj: "repo yok veya .verimlilik'siz: " + repoAd };
+      const md = planMdOku(repo.yol);
+      if (md === null) return { ok: false, mesaj: repoAd + "/.verimlilik/plan.md yok" };
+      const sonuc = derle(md, izinliDizinleriOku(repo.yol));
+      if (eylem === "plan-derle") {
+        return { ok: sonuc.ok, mesaj: JSON.stringify({ hatalar: sonuc.hatalar, uyarilar: sonuc.uyarilar, gorevSayisi: sonuc.gorevler.length, kanonikMd: sonuc.kanonikMd }) };
+      }
+      if (!sonuc.ok) return { ok: false, mesaj: "checker RED: " + sonuc.hatalar.join(" | ") };
+      const birlesik = birlestir(sonuc.gorevler, emirlerOku(repo.yol));
+      emirlerYaz(repo.yol, repo.ad, birlesik, sonuc.mdHash);
+      return { ok: true, mesaj: birlesik.length + " gorev islendi" };
+    }
     return { ok: false, mesaj: "bilinmeyen eylem: " + eylem };
   }
 
@@ -186,6 +213,22 @@ export function panoBaslat(getPaseo: () => PaseoApi | null): { durum: () => Pano
       izinleriTopla()
         .then((izinler) => jsonYaz(res, 200, { izinler }))
         .catch((e) => jsonYaz(res, 500, { hata: String(e?.message ?? e) }));
+      return;
+    }
+    if (req.method === "GET" && yol === "/api/repolar") {
+      const kokler = (process.env.PANO_KOKLER ?? "D:\\Vibecode").split(";");
+      jsonYaz(res, 200, { repolar: repolariBul(kokler).map((r) => r.ad) });
+      return;
+    }
+    if (req.method === "GET" && yol === "/api/plan") {
+      const repoAd = url.searchParams.get("repo") ?? "";
+      const kokler = (process.env.PANO_KOKLER ?? "D:\\Vibecode").split(";");
+      const repo = repolariBul(kokler).find((r) => r.ad === repoAd);
+      if (!repo) { jsonYaz(res, 404, { hata: "repo yok veya .verimlilik'siz" }); return; }
+      const md = planMdOku(repo.yol);
+      const emirler = emirlerOku(repo.yol);
+      const drift = md !== null && emirler !== null && mdHash(md) !== emirler.kaynakMdHash;
+      jsonYaz(res, 200, { repo: repoAd, md, emirler, drift });
       return;
     }
     if (req.method === "GET" && yol === "/api/canli") {
