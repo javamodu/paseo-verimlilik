@@ -1,4 +1,5 @@
-import { execFileSync } from "node:child_process";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { PluginHookAgent } from "@getpaseo/plugin/server";
@@ -15,24 +16,26 @@ export interface KomutSonuc {
   kod: number;
 }
 
-export type KomutCalistir = (komut: string[], cwd: string) => KomutSonuc;
+export type KomutCalistir = (komut: string[], cwd: string) => KomutSonuc | Promise<KomutSonuc>;
 
 const TARAMA_MS = 15 * 60_000;
 const FAIL_PENCERE_TUR = 20;
 const FAIL_ORAN_ESIK = 0.25;
 const FAIL_MIN_TUR = 5;
 
-export const gercekCalistir: KomutCalistir = (komut, cwd) => {
+// K-0029 (A2-8): execFileSync event loop'u 90sn bloke ediyordu — async execFile.
+const execFileAsync = promisify(execFile);
+export const gercekCalistir: KomutCalistir = async (komut, cwd) => {
   try {
-    const cikti = execFileSync(komut[0], komut.slice(1), { cwd, timeout: 90_000, encoding: "utf8", windowsHide: true });
-    return { cikti, kod: 0 };
+    const { stdout } = await execFileAsync(komut[0], komut.slice(1), { cwd, timeout: 90_000, encoding: "utf8", windowsHide: true, maxBuffer: 16 * 1024 * 1024 });
+    return { cikti: stdout, kod: 0 };
   } catch (error) {
-    const e = error as { status?: number; stdout?: string; message?: string };
-    return { cikti: (e.stdout ?? "") + (e.message ?? ""), kod: e.status ?? 1 };
+    const e = error as { code?: number | string; stdout?: string; message?: string };
+    return { cikti: (e.stdout ?? "") + (e.message ?? ""), kod: typeof e.code === "number" ? e.code : 1 };
   }
 };
 
-function psKopru(repoKok: string, scriptAd: string, calistir: KomutCalistir): KomutSonuc | null {
+async function psKopru(repoKok: string, scriptAd: string, calistir: KomutCalistir): Promise<KomutSonuc | null> {
   const yol = join(repoKok, "scripts", scriptAd);
   if (!existsSync(yol)) return null;
   return calistir(["powershell", "-ExecutionPolicy", "Bypass", "-File", yol], repoKok);
@@ -85,9 +88,9 @@ function gelenKutuBekleyen(repoKok: string, simdiMs: number): BekciAnomali | nul
   return { anahtar: "gelen-kutu-bekleyen", detay: eski.length + " madde 24s+ islenmemis (toplam bekleyen " + bekleyen + "): " + eski.slice(0, 3).join(", ") };
 }
 
-export function bekciKontrol(repoKok: string, calistir: KomutCalistir = gercekCalistir): BekciAnomali[] {
+export async function bekciKontrol(repoKok: string, calistir: KomutCalistir = gercekCalistir): Promise<BekciAnomali[]> {
   const anomaliler: BekciAnomali[] = [];
-  const saglik = psKopru(repoKok, "saglik.ps1", calistir);
+  const saglik = await psKopru(repoKok, "saglik.ps1", calistir);
   if (saglik) {
     const m = saglik.cikti.match(/SONUC:\s*(\d+) OK,\s*(\d+) EKSIK,\s*(\d+) SARI/);
     if (!m) {
@@ -96,12 +99,12 @@ export function bekciKontrol(repoKok: string, calistir: KomutCalistir = gercekCa
       anomaliler.push({ anahtar: "saglik-eksik", detay: m[2] + " EKSIK, " + m[3] + " SARI" });
     }
   }
-  const zincir = psKopru(repoKok, "zincir-kontrol.ps1", calistir);
+  const zincir = await psKopru(repoKok, "zincir-kontrol.ps1", calistir);
   if (zincir && zincir.kod !== 0) {
     anomaliler.push({ anahtar: "zincir-kopuk", detay: "handoff zincirinde kopuk var" });
   }
   if (existsSync(join(repoKok, "STATE_BOARD.md"))) {
-    const st = calistir(["git", "status", "--short"], repoKok);
+    const st = await calistir(["git", "status", "--short"], repoKok);
     if (st.kod === 0 && st.cikti.trim().length > 0) {
       const kirli = st.cikti.trim().split(/\r?\n/).filter((l) => !/raporlar[\/\\]telemetri-haftalik[\/\\]/.test(l) && !/\.verimlilik[\/\\]/.test(l));
       if (kirli.length > 0) {
@@ -128,13 +131,13 @@ export interface BekciOzet {
   bildirilen: number;
 }
 
-export function bekciTara(
+export async function bekciTara(
   ajanlar: Map<string, PluginHookAgent>,
   aktifTurVarMi: (repoKok: string) => boolean,
   gonder: (agent: PluginHookAgent, mesaj: string) => Promise<void>,
   calistir: KomutCalistir = gercekCalistir,
   simdi: Date = new Date(),
-): BekciOzet {
+): Promise<BekciOzet> {
   const ozet: BekciOzet = { taranan: 0, ertelenen: 0, anomalili: 0, bildirilen: 0 };
   const repoAjan = new Map<string, PluginHookAgent>();
   for (const [, agent] of ajanlar) {
@@ -146,7 +149,7 @@ export function bekciTara(
     try {
       if (ayarOku(repoKok).bekciKapali) continue;
       if (aktifTurVarMi(repoKok)) { ozet.ertelenen++; continue; }
-      const anomaliler = bekciKontrol(repoKok, calistir);
+      const anomaliler = await bekciKontrol(repoKok, calistir);
       if (anomaliler.length === 0) continue;
       ozet.anomalili++;
       const dosya = raporDosyasi(repoKok, simdi);
@@ -203,7 +206,7 @@ export function bekciBaslat(
 ): () => void {
   const timer = setInterval(() => {
     try {
-      bekciTara(ajanlar, aktifTurVarMi, gonder);
+      void bekciTara(ajanlar, aktifTurVarMi, gonder);
     } catch (error) {
       console.error("[paseo-verimlilik] bekci tarama hatasi", error);
     }

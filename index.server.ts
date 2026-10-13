@@ -111,12 +111,17 @@ export default function contribute(server: PluginServerContext) {
     server.on("agent.turn_ended", async (event, context) => {
       paseoRef = context.paseo;
       const agentId = event.agent.id;
-      aktifTurler.delete(agentId);
-      const ozetlerTur = turCagrilari(event.timeline);
-      const editliTur = editliMi(ozetlerTur);
-      pitbullTurBitti(agentId, editliTur);
       let loopDurtme = false;
       let finishGateDurtme = false;
+      // K-0029 (A2-5): turKaydet finally'de — govdedeki hata tur kaydini ve aktifTur dusumunu atlamaz.
+      let usage = null;
+      let model: string | null = null;
+      let modBilgi: ReturnType<typeof modCoz> = null;
+      try {
+        aktifTurler.delete(agentId);
+        const ozetlerTur = turCagrilari(event.timeline);
+        const editliTur = editliMi(ozetlerTur);
+        pitbullTurBitti(agentId, editliTur);
       try {
         if (event.outcome.kind === "completed") {
           loopDurtme = await loopKontrol(agentId, event.timeline, context);
@@ -150,8 +155,6 @@ export default function contribute(server: PluginServerContext) {
         console.error("[paseo-verimlilik] kabul takip hatasi", error);
       }
 
-      let usage = null;
-      let model: string | null = null;
       try {
         const snap = await context.paseo.agents.ref(agentId).refresh();
         usage = snap?.agent?.lastUsage ?? null;
@@ -159,18 +162,26 @@ export default function contribute(server: PluginServerContext) {
       } catch {
         // usage alinamazsa null kalir
       }
-      const modBilgi = modCoz(event.agent.cwd, event.agent.provider, model);
-      turKaydet({
-        agent: event.agent,
-        turnId: event.turnId,
-        outcome: event.outcome,
-        timeline: event.timeline,
-        usage,
-        model,
-        mod: modBilgi?.ad ?? null,
-        loopDurtme,
-        finishGateDurtme,
-      });
+      modBilgi = modCoz(event.agent.cwd, event.agent.provider, model);
+      } catch (error) {
+        console.error("[paseo-verimlilik] turn_ended govde hatasi", error);
+      } finally {
+        try {
+          turKaydet({
+            agent: event.agent,
+            turnId: event.turnId,
+            outcome: event.outcome,
+            timeline: event.timeline,
+            usage,
+            model,
+            mod: modBilgi?.ad ?? null,
+            loopDurtme,
+            finishGateDurtme,
+          });
+        } catch (error) {
+          console.error("[paseo-verimlilik] turKaydet hatasi", error);
+        }
+      }
       if (modBilgi?.ad === "atolye") {
         const oran = contextRotOrani(usage);
         if (oran !== null && oran >= 0.8 && rotDurtmeliMi(agentId, Date.now())) {

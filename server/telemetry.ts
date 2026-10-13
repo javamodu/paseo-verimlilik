@@ -45,9 +45,20 @@ const turBaslangiclari = new Map<string, number>();
 // K-0025 (A2-1): agent.closed sonrasi bellek sizintisini onler.
 export function ajanTemizle(agentId: string): void {
   turSayaclari.delete(agentId);
-  turBaslangiclari.delete(agentId);
+  // K-0029 (A2-6): acik turu kapanmadan kapanan ajan aktifTur'u sisirmesin.
+  if (turBaslangiclari.delete(agentId)) {
+    aktifTur = Math.max(0, aktifTur - 1);
+  }
+}
+export function _testIcinAktifTur(): number {
+  return aktifTur;
 }
 let aktifTur = 0;
+let rollupSayisi = 0;
+const sonRollup = new Map<string, number>();
+export function _testIcinRollupSayisi(): number {
+  return rollupSayisi;
+}
 export const PARALEL_TAVAN = 3;
 
 export function telemetriDosyasi(cwd: string): string {
@@ -133,8 +144,16 @@ export function turKaydet(input: {
     finishGateDurtme: input.finishGateDurtme || undefined,
     detay: detayParca.length > 0 ? detayParca.join(" ") : undefined,
   });
+  // K-0029 (A2-6): tur kapandi — baslangic kaydi temizlenir; kalan kayit = acik tur.
+  turBaslangiclari.delete(input.agent.id);
+  // K-0029 (A2-8): rollup her turda tam jsonl okur — 60sn seyreklestirme.
   try {
-    haftalikRollup(input.agent.cwd);
+    const sonR = sonRollup.get(input.agent.cwd) ?? 0;
+    if (Date.now() - sonR > 60_000) {
+      sonRollup.set(input.agent.cwd, Date.now());
+      rollupSayisi++;
+      haftalikRollup(input.agent.cwd);
+    }
   } catch (error) {
     console.error("[paseo-verimlilik] rollup hatasi", error);
   }
