@@ -44,7 +44,7 @@ export interface TelemetriKayit {
 
 const turSayaclari = new Map<string, number>();
 const turBaslangiclari = new Map<string, number>();
-const locBaslangiclari = new Map<string, number | null>();
+const locBaslangiclari = new Map<string, { sha: string | null; uncommitted: number | null }>();
 
 // K-0032 (v0.19): tur baslangicinda working-tree numstat toplami (ekleme+silme).
 // Git yoksa / repo degilse null - asla exception firlatmaz.
@@ -102,11 +102,32 @@ export function telemetriYaz(cwd: string, kayit: TelemetriKayit): void {
   }
 }
 
+// K-0032 (v0.20, BK-02): tur baslangic HEAD'i — commit-aware locDelta icin.
+export function headSha(cwd: string): string | null {
+  try {
+    const s = execFileSync("git", ["rev-parse", "HEAD"], { cwd, timeout: 2000, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+    return s || null;
+  } catch { return null; }
+}
+
+// K-0032 (v0.20, BK-02): iki rev arasi numstat toplami (ekleme+silme). Git yoksa null.
+export function commitSatirlari(cwd: string, eski: string, yeni: string): number | null {
+  try {
+    const cikti = execFileSync("git", ["diff", "--numstat", eski, yeni], { cwd, timeout: 2000, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+    let toplam = 0;
+    for (const satir of cikti.split(/\r?\n/)) {
+      const m = satir.match(/^(\d+)\s+(\d+)\s+/);
+      if (m) toplam += parseInt(m[1], 10) + parseInt(m[2], 10);
+    }
+    return toplam;
+  } catch { return null; }
+}
+
 export function turBaslat(agentId: string, cwd?: string): number {
   turBaslangiclari.set(agentId, Date.now());
   aktifTur++;
   if (cwd) {
-    locBaslangiclari.set(agentId, locSnapshot(cwd));
+    locBaslangiclari.set(agentId, { sha: headSha(cwd), uncommitted: locSnapshot(cwd) });
   }
   if (cwd && aktifTur > PARALEL_TAVAN) {
     telemetriYaz(cwd, {
@@ -154,9 +175,18 @@ export function turKaydet(input: {
   // K-0032 (v0.19): baslangic snapshot'i ile fark; git'siz ortamda null.
   const locBaslangic = locBaslangiclari.get(input.agent.id);
   locBaslangiclari.delete(input.agent.id);
-  const locDelta = locBaslangic === undefined || locBaslangic === null
+  // K-0032 (v0.20, BK-02): commit-aware — tur icinde atilan commit'lerin satirlari + uncommitted fark.
+  const locDelta = !locBaslangic || locBaslangic.uncommitted === null
     ? null
-    : (() => { const simdi = locSnapshot(input.agent.cwd); return simdi === null ? null : simdi - locBaslangic; })();
+    : (() => {
+        const simdi = locSnapshot(input.agent.cwd);
+        if (simdi === null) return null;
+        const simdiSha = headSha(input.agent.cwd);
+        const commitSatir = locBaslangic.sha && simdiSha && locBaslangic.sha !== simdiSha
+          ? (commitSatirlari(input.agent.cwd, locBaslangic.sha, simdiSha) ?? 0)
+          : 0;
+        return commitSatir + (simdi - (locBaslangic.uncommitted as number));
+      })();
   telemetriYaz(input.agent.cwd, {
     ts: new Date().toISOString(),
     tip: "tur",

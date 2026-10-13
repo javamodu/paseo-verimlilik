@@ -25,7 +25,7 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
   let turSnToplam = 0, turSnAdet = 0, cacheAgirlikli = 0, cacheAgirlik = 0;
   let altAjanTur = 0;
   // K-0032 (v0.19): LOC + rework olcumleri
-  let toplamLocDelta = 0, locAdet = 0, toplamEdit = 0;
+  let toplamLocDelta = 0, locAdet = 0, toplamEdit = 0, ciftLoc = 0, ciftSn = 0;
   const dosyaTurlari = new Map<string, number[]>();
   for (const satir of readFileSync(tel, "utf8").split(/\r?\n/)) {
     if (!satir.trim()) continue;
@@ -40,7 +40,7 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
         if (r.loopDurtme) loop++;
         if (r.finishGateDurtme) fg++;
         if (typeof r.turSn === "number") { turSnToplam += r.turSn; turSnAdet++; }
-        if (typeof r.locDelta === "number") { toplamLocDelta += r.locDelta; locAdet++; }
+        if (typeof r.locDelta === "number") { toplamLocDelta += r.locDelta; locAdet++; if (typeof r.turSn === "number") { ciftLoc += r.locDelta; ciftSn += r.turSn; } }
         if (Array.isArray(r.editDosyalari)) {
           for (const d of r.editDosyalari) {
             if (typeof d !== "string") continue;
@@ -89,7 +89,7 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
     if (rework) reworkEdit += zamanlar.length;
   }
   const reworkOrani = toplamEdit > 0 ? Math.round((reworkEdit / toplamEdit) * 1000) / 1000 : null;
-  const saatlikLoc = turSnToplam > 0 ? Math.round(toplamLocDelta / (turSnToplam / 3600)) : null;
+  const saatlikLoc = ciftSn > 0 ? Math.round(ciftLoc / (ciftSn / 3600)) : null; // K-0032 (R3-06): pay=payda ayni alt-kume (locDelta+turSn birlikte)
   const etkinLoc = locAdet > 0 ? Math.round(toplamLocDelta * (1 - (reworkOrani ?? 0))) : null;
   const oran = kabulOrani !== null ? "%" + Math.round(kabulOrani) + " (" + kabul + "/" + kabulToplam + ")" : "henüz veri yok";
   const oncekiHaftaAd = isoHafta(new Date(simdi.getTime() - 7 * 86400000));

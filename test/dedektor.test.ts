@@ -868,6 +868,31 @@ assert(modCoz(mTmp, "codex", undefined)?.ad === "firtina", "undefined model: pro
     tk7({ agent: { id: "loc-2", cwd: gTmp, provider: "codex" }, turnId: "t", outcome: { kind: "completed" }, timeline: [], usage: null, model: null, mod: null, loopDurtme: false, finishGateDurtme: false } as never);
     const satir7b = JSON.parse(fspM.readFileSync(td7(gTmp), "utf8").trim().split("\n").pop()!);
     assert(satir7b.locDelta === null, "turBaslat'siz turKaydet locDelta null");
+    // v0.20 (BK-02): commit-aware locDelta — tur icinde commit atilirsa satirlar pozitif sayilir
+    const cp7 = await import("node:child_process");
+    const rTmp3 = fspM.mkdtempSync(osM.tmpdir() + "/locgit-");
+    let gitVar = true;
+    try { cp7.execFileSync("git", ["init"], { cwd: rTmp3, stdio: "ignore" }); } catch { gitVar = false; }
+    if (gitVar) {
+      cp7.execFileSync("git", ["config", "user.email", "t@t.t"], { cwd: rTmp3 });
+      cp7.execFileSync("git", ["config", "user.name", "t"], { cwd: rTmp3 });
+      fspM.writeFileSync(rTmp3 + "/a.txt", "satir1\n");
+      cp7.execFileSync("git", ["add", "a.txt"], { cwd: rTmp3 });
+      cp7.execFileSync("git", ["commit", "-m", "init"], { cwd: rTmp3, stdio: "ignore" });
+      tb7("loc-4", rTmp3);
+      fspM.writeFileSync(rTmp3 + "/b.txt", "s1\ns2\ns3\n");
+      cp7.execFileSync("git", ["add", "b.txt"], { cwd: rTmp3 });
+      cp7.execFileSync("git", ["commit", "-m", "tur-ici"], { cwd: rTmp3, stdio: "ignore" });
+      tk7({ agent: { id: "loc-4", cwd: rTmp3, provider: "codex" }, turnId: "t", outcome: { kind: "completed" }, timeline: [], usage: null, model: null, mod: null, loopDurtme: false, finishGateDurtme: false } as never);
+      const satir7c = JSON.parse(fspM.readFileSync(td7(rTmp3), "utf8").trim().split("\n").pop()!);
+      assert(satir7c.locDelta === 3, "BK-02: tur-ici commit pozitif sayilir (3 satir): " + JSON.stringify(satir7c.locDelta));
+      tb7("loc-5", rTmp3);
+      fspM.appendFileSync(rTmp3 + "/a.txt", "yeni1\nyeni2\n");
+      tk7({ agent: { id: "loc-5", cwd: rTmp3, provider: "codex" }, turnId: "t", outcome: { kind: "completed" }, timeline: [], usage: null, model: null, mod: null, loopDurtme: false, finishGateDurtme: false } as never);
+      const satir7d = JSON.parse(fspM.readFileSync(td7(rTmp3), "utf8").trim().split("\n").pop()!);
+      assert(satir7d.locDelta === 2, "BK-02: commitsiz tur uncommitted fark (2 satir): " + JSON.stringify(satir7d.locDelta));
+      fspM.rmSync(rTmp3, { recursive: true, force: true });
+    }
     const zamanli = [tc("edit", "edit", { filePath: "a.ts" }), tc("edit", "edit", { filePath: "a.ts" }), tc("edit", "write", { filePath: "b.ts" }), tc("exec", "shell", { command: "echo x > c.txt", exitCode: 0 })];
     tb7("loc-3", gTmp);
     tk7({ agent: { id: "loc-3", cwd: gTmp, provider: "codex" }, turnId: "t", outcome: { kind: "completed" }, timeline: zamanli, usage: null, model: null, mod: null, loopDurtme: false, finishGateDurtme: false } as never);
@@ -892,7 +917,7 @@ assert(modCoz(mTmp, "codex", undefined)?.ad === "firtina", "undefined model: pro
     assert(yol7 !== null, "LOC kayitli rollup uretildi");
     const j7 = JSON.parse(fspM.readFileSync(rTmp + "/raporlar/telemetri-haftalik/" + ih7(simdi7) + ".json", "utf8"));
     assert(j7.toplamLocDelta === 180, "toplamLocDelta: " + j7.toplamLocDelta);
-    assert(j7.saatlikLoc === 180, "saatlikLoc = 180 / 1saat: " + j7.saatlikLoc);
+    assert(j7.saatlikLoc === 30, "R3-06: saatlikLoc ayni alt-kume (locDelta+turSn cifti: 30/1saat): " + j7.saatlikLoc);
     assert(j7.reworkOrani === 0.5, "reworkOrani = 2/4: " + j7.reworkOrani);
     assert(j7.etkinLoc === 90, "etkinLoc = 180 * 0.5: " + j7.etkinLoc);
     assert(fspM.readFileSync(yol7!, "utf8").includes("rework"), "md rework satiri icerir");
