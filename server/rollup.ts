@@ -47,12 +47,14 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
         if (typeof r.testKosu === "number") { testKosuToplam += r.testKosu; testKirmiziToplam += (typeof r.testKirmizi === "number" ? r.testKirmizi : 0); }
         if (typeof r.halRef === "number") { halRefToplam += r.halRef; halKirikToplam += (typeof r.halKirik === "number" ? r.halKirik : 0); }
         if (Array.isArray(r.editDosyalari)) {
+          // R3-05: anahtara agentId tasindi — paralel ajanlarin ayni dosya editi rework sayilmaz.
+          const ajanAnahtar = typeof r.agentId === "string" ? r.agentId : "";
           for (const d of r.editDosyalari) {
             if (typeof d !== "string") continue;
             toplamEdit++;
-            const liste = dosyaTurlari.get(d) ?? [];
+            const liste = dosyaTurlari.get(d + "|" + ajanAnahtar) ?? [];
             liste.push(tarih.getTime());
-            dosyaTurlari.set(d, liste);
+            dosyaTurlari.set(d + "|" + ajanAnahtar, liste);
           }
         }
         if (typeof r.detay === "string") {
@@ -85,15 +87,13 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
   const ortTurSn = turSnAdet > 0 ? Math.round(turSnToplam / turSnAdet) : null;
   const ortCache = cacheAgirlik > 0 ? Math.round((cacheAgirlikli / cacheAgirlik) * 10) / 10 : null;
   // K-0032: ayni dosya 24 saat icinde birden fazla turda editlendiyse rework sayilir.
+  // R3-05: yalniz pencere-ici tekrar editler sayilir (eskiden eslesen dosyanin tum gecmisi rework'e katilirdi).
   let reworkEdit = 0;
   for (const zamanlar of dosyaTurlari.values()) {
-    let rework = false;
-    for (let i = 0; i < zamanlar.length && !rework; i++) {
-      for (let j = i + 1; j < zamanlar.length; j++) {
-        if (Math.abs(zamanlar[i] - zamanlar[j]) <= 24 * 3600 * 1000) { rework = true; break; }
-      }
+    const sirali = [...zamanlar].sort((a, b) => a - b);
+    for (let i = 1; i < sirali.length; i++) {
+      if (sirali[i] - sirali[i - 1] <= 24 * 3600 * 1000) reworkEdit++;
     }
-    if (rework) reworkEdit += zamanlar.length;
   }
   const reworkOrani = toplamEdit > 0 ? Math.round((reworkEdit / toplamEdit) * 1000) / 1000 : null;
   const ortTps = tpsAdet > 0 ? Math.round((tpsToplam / tpsAdet) * 10) / 10 : null;

@@ -879,6 +879,45 @@ assert(modCoz(mTmp, "codex", undefined)?.ad === "firtina", "undefined model: pro
     fspM.rmSync(mTmp, { recursive: true, force: true });
   }
   {
+    // R3-07: k3Satiri doldu/bozuk ayrimi fail-visible
+    const { k3Satiri: k3 } = await import("../server/enjekte");
+    const kTmp = fspM.mkdtempSync(osM.tmpdir() + "/r37-");
+    fspM.mkdirSync(kTmp + "/.verimlilik", { recursive: true });
+    fspM.writeFileSync(kTmp + "/.verimlilik/ayar.json", JSON.stringify({ k3Bitis: "2020-01-01" }));
+    assert(k3(kTmp, "firtina")!.includes("doldu"), "R3-07: suresi dolmus lisans 'doldu' basar");
+    fspM.writeFileSync(kTmp + "/.verimlilik/ayar.json", JSON.stringify({ k3Bitis: "bozuk-tarih" }) + "  ");
+    assert(k3(kTmp, "firtina")!.includes("bozuk"), "R3-07: bozuk tarih sessiz null degil, gorunur mesaj");
+    fspM.writeFileSync(kTmp + "/.verimlilik/ayar.json", JSON.stringify({ k3Bitis: new Date(Date.now() + 86400000).toISOString() }) + " ");
+    assert(k3(kTmp, "firtina")!.includes("kalan sure"), "R3-07: gelecek tarih kalan-sure basar");
+    assert(k3(kTmp, "atolye") === null, "R3-07: firtina disi null korunur");
+    fspM.rmSync(kTmp, { recursive: true, force: true });
+  }
+  {
+    // R3-05: rework ajan-bazli + yalniz pencere-ici tekrarlar
+    const { haftalikRollup: hr5 } = await import("../server/rollup");
+    const rTmp = fspM.mkdtempSync(osM.tmpdir() + "/r35-");
+    fspM.mkdirSync(rTmp + "/raporlar/telemetri-haftalik", { recursive: true });
+    fspM.mkdirSync(rTmp + "/.verimlilik", { recursive: true });
+    const baz = new Date();
+    baz.setUTCDate(baz.getUTCDate() + (4 - (baz.getUTCDay() || 7)));
+    baz.setUTCHours(12, 0, 0, 0);
+    const H = 3600_000;
+    const tur = (ts: number, agentId: string, dosyalar: string[]) => JSON.stringify({ ts: new Date(ts).toISOString(), tip: "tur", agentId, provider: "codex", editDosyalari: dosyalar });
+    const satirlar = [
+      tur(baz.getTime() - 2 * H, "a", ["f.ts"]),
+      tur(baz.getTime() - 1 * H, "b", ["f.ts"]),
+      tur(baz.getTime(), "a", ["f.ts"]),
+      tur(baz.getTime() - 30 * H, "a", ["g.ts"]),
+      tur(baz.getTime(), "a", ["g.ts"]),
+    ];
+    fspM.writeFileSync(rTmp + "/.verimlilik/telemetri.jsonl", satirlar.join("\n") + "\n");
+    const yol5 = hr5(rTmp);
+    assert(yol5 !== null, "R3-05: rollup uretildi");
+    const rd5 = JSON.parse(fspM.readFileSync(yol5!.replace(/\.md$/, ".json"), "utf8"));
+    assert(rd5.reworkOrani === 0.2, "R3-05: yalniz ayni-ajan pencere-ici tekrar rework (1/5=0.2), paralel ajan ve pencere-disi sayilmaz — gelen: " + rd5.reworkOrani);
+    fspM.rmSync(rTmp, { recursive: true, force: true });
+  }
+  {
     const { panoIsaretciYaz: piY } = await import("../server/bekci");
     const pTmp = fspM.mkdtempSync(osM.tmpdir() + "/a35-");
     fspM.writeFileSync(pTmp + "/STATE_BOARD.md", "# Pano\n## Baska\n");
@@ -1000,8 +1039,8 @@ assert(modCoz(mTmp, "codex", undefined)?.ad === "firtina", "undefined model: pro
     const j7 = JSON.parse(fspM.readFileSync(rTmp + "/raporlar/telemetri-haftalik/" + ih7(simdi7) + ".json", "utf8"));
     assert(j7.toplamLocDelta === 180, "toplamLocDelta: " + j7.toplamLocDelta);
     assert(j7.saatlikLoc === 30, "R3-06: saatlikLoc ayni alt-kume (locDelta+turSn cifti: 30/1saat): " + j7.saatlikLoc);
-    assert(j7.reworkOrani === 0.5, "reworkOrani = 2/4: " + j7.reworkOrani);
-    assert(j7.etkinLoc === 90, "etkinLoc = 180 * 0.5: " + j7.etkinLoc);
+    assert(j7.reworkOrani === 0.25, "R3-05: yalniz pencere-ici tekrar 1/4: " + j7.reworkOrani);
+    assert(j7.etkinLoc === 135, "R3-05: etkinLoc = 180 * 0.75: " + j7.etkinLoc);
     assert(fspM.readFileSync(yol7!, "utf8").includes("rework"), "md rework satiri icerir");
     assert(j7.ortDecodeTps === 20, "v0.21: ortDecodeTps=20: " + j7.ortDecodeTps);
     assert(j7.testKirmiziOrani === 50, "v0.21: testKirmiziOrani=50 (1/2): " + j7.testKirmiziOrani);
@@ -1043,7 +1082,7 @@ assert(modCoz(mTmp, "codex", undefined)?.ad === "firtina", "undefined model: pro
     const k3Satir = k3Satiri(k3Tmp, "firtina", k3Simdi);
     assert(k3Satir === "K3 kalan sure: 2 gun 12 saat (bitis: 2026-10-15T12:00:00.000Z)", "K-0032: kalan sure dogru: " + k3Satir);
     fspM.writeFileSync(k3Tmp + "/.verimlilik/ayar.json", JSON.stringify({ k3Bitis: "bozuk-tarih" }));
-    assert(k3Satiri(k3Tmp, "firtina", k3Simdi) === null, "K-0032: bozuk tarihte satir sessizce atlanir");
+    assert(k3Satiri(k3Tmp, "firtina", k3Simdi)!.includes("bozuk"), "R3-07: bozuk tarih fail-visible (sessiz null kaldirildi)");
     fspM.rmSync(k3Tmp, { recursive: true, force: true });
   }
 

@@ -5,15 +5,16 @@ import { enjeksiyonMetni } from "./sozlesme";
 import { ayarOku } from "./ayar";
 import { modCoz } from "./modlar";
 
-// K-0032 (v0.19): firtina modunda sistem ekine K3 kalan-sure satiri. Hata/bozuk tarihte sessizce null doner.
+// K-0032 (v0.19): firtina modunda sistem ekine K3 kalan-sure satiri. R3-07: dolmus/bozuk tarih fail-visible mesaj basar; yalniz catch'te null doner.
 export function k3Satiri(cwd: string, modAd: string | null, simdi: number = Date.now()): string | null {
   if (modAd !== "firtina") return null;
   try {
     const bitisMetin = ayarOku(cwd).k3Bitis;
     if (!bitisMetin) return "K3 bitis tarihi ayarlanmamis (.verimlilik/ayar.json k3Bitis)";
     const bitis = Date.parse(bitisMetin);
-    if (Number.isNaN(bitis)) return null;
-    const kalan = Math.max(0, bitis - simdi);
+    if (Number.isNaN(bitis)) return "K3 bitis tarihi bozuk (.verimlilik/ayar.json k3Bitis: '" + bitisMetin + "')";
+    if (bitis - simdi <= 0) return "K3 lisans suresi doldu (bitis: " + bitisMetin + ") — modu gozden gecir";
+    const kalan = bitis - simdi;
     const gun = Math.floor(kalan / 86_400_000);
     const saat = Math.floor((kalan % 86_400_000) / 3_600_000);
     return "K3 kalan sure: " + gun + " gun " + saat + " saat (bitis: " + bitisMetin + ")";
