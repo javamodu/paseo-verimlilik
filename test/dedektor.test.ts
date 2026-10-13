@@ -918,6 +918,31 @@ assert(modCoz(mTmp, "codex", undefined)?.ad === "firtina", "undefined model: pro
     fspM.rmSync(rTmp, { recursive: true, force: true });
   }
   {
+    // D2-08: kuyruk-okuma + rotasyon
+    const { telemetriSatirlari: ts8 } = await import("../server/rollup");
+    const { telemetriYaz: ty8, telemetriDosyasi: td8 } = await import("../server/telemetry");
+    const dTmp = fspM.mkdtempSync(osM.tmpdir() + "/d28-");
+    fspM.mkdirSync(dTmp + "/.verimlilik", { recursive: true });
+    const dolgu = "x".repeat(100) + "\n";
+    const buyuk = dolgu.repeat(26000) + JSON.stringify({ ts: new Date().toISOString(), tip: "tur", agentId: "kuyruk-ajan" }) + "\n";
+    const dDosya = dTmp + "/.verimlilik/telemetri.jsonl";
+    fspM.writeFileSync(dDosya, buyuk);
+    assert(buyuk.length > 2 * 1024 * 1024, "D2-08: fikstur 2MB ustu");
+    const satirlar8 = ts8(dDosya);
+    assert(satirlar8.some((s) => s.includes("kuyruk-ajan")), "D2-08: kuyruk-okuma son satiri yakalar");
+    const { haftalikRollup: hr8 } = await import("../server/rollup");
+    assert(hr8(dTmp) !== null, "D2-08: 2MB ustu dosyada rollup canli-hafta kaydini bulur");
+    const cizgi = JSON.stringify({ tip: "tur" }) + "\n";
+    fspM.writeFileSync(dDosya, cizgi.repeat(400000));
+    assert(fspM.statSync(dDosya).size > 5 * 1024 * 1024, "D2-08: fikstur 5MB ustu");
+    ty8(dTmp, { ts: new Date().toISOString(), tip: "lint", agentId: "rotasyon", provider: "t", detay: "rotasyon-test" });
+    const boyut8 = fspM.statSync(dDosya).size;
+    assert(boyut8 < 3 * 1024 * 1024, "D2-08: rotasyon 5MB ustu dosyayi ~2MB'a indirir, gelen: " + boyut8);
+    const son8 = fspM.readFileSync(dDosya, "utf8").trim().split("\n").pop()!;
+    assert(JSON.parse(son8).agentId === "rotasyon", "D2-08: rotasyon sonrasi yeni kayit dosyada");
+    fspM.rmSync(dTmp, { recursive: true, force: true });
+  }
+  {
     const { panoIsaretciYaz: piY } = await import("../server/bekci");
     const pTmp = fspM.mkdtempSync(osM.tmpdir() + "/a35-");
     fspM.writeFileSync(pTmp + "/STATE_BOARD.md", "# Pano\n## Baska\n");

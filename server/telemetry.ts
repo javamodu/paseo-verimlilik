@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, appendFileSync, readFileSync, existsSync } from "node:fs";
+import { mkdirSync, appendFileSync, readFileSync, existsSync, openSync, readSync, closeSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { PluginHookAgent, PluginTurnOutcome } from "@getpaseo/plugin/server";
 import type { AgentTimelineItem, AgentUsage } from "@getpaseo/protocol/agent-types";
@@ -96,9 +96,35 @@ export function telemetriDosyasi(cwd: string): string {
   return join(katmanKokuBul(cwd), ".verimlilik", "telemetri.jsonl");
 }
 
+// D2-08: telemetri.jsonl rotasyonsuz sonsuza buyuyordu — 5MB ustu dosyada son 2MB korunur (satir sinirina hizali).
+const ROTASYON_TAVAN = 5 * 1024 * 1024;
+const ROTASYON_KORU = 2 * 1024 * 1024;
+
+function telemetriRotasyon(dosya: string): void {
+  try {
+    if (!existsSync(dosya)) return;
+    const boyut = statSync(dosya).size;
+    if (boyut <= ROTASYON_TAVAN) return;
+    const fd = openSync(dosya, "r");
+    let metin: string;
+    try {
+      const kuyruk = Buffer.alloc(ROTASYON_KORU);
+      readSync(fd, kuyruk, 0, ROTASYON_KORU, boyut - ROTASYON_KORU);
+      metin = kuyruk.toString("utf8");
+    } finally {
+      closeSync(fd);
+    }
+    const ilkNl = metin.indexOf("\n");
+    writeFileSync(dosya, metin.slice(ilkNl + 1), "utf8");
+  } catch (error) {
+    console.error("[paseo-verimlilik] telemetri rotasyon hatasi", error);
+  }
+}
+
 export function telemetriYaz(cwd: string, kayit: TelemetriKayit): void {
   try {
     const dosya = telemetriDosyasi(cwd);
+    telemetriRotasyon(dosya);
     // K-0028 (A2-4): mkdir hedef dosyanin dizininde — alt-dizin cwd'sinde kok .verimlilik yoksa kayit sessizce dusuyordu.
     mkdirSync(dirname(dosya), { recursive: true });
     appendFileSync(dosya, JSON.stringify(kayit) + "\n", "utf8");

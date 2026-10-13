@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 export function isoHafta(d: Date): string {
@@ -8,6 +8,24 @@ export function isoHafta(d: Date): string {
   const yilBasi = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
   const hafta = Math.ceil(((t.getTime() - yilBasi.getTime()) / 86400000 + 1) / 7);
   return t.getUTCFullYear() + "-W" + String(hafta).padStart(2, "0");
+}
+
+// D2-08: telemetri buyudukce tam okuma O(dosya) sisme yapiyordu — rollup yalniz canli haftayi isledigi icin
+// 2MB ustu dosyada yalniz kuyruk okunur (satir sinirindan baslanir; bas yarim satir atilir).
+const TAM_OKU_TAVAN = 2 * 1024 * 1024;
+export function telemetriSatirlari(dosya: string): string[] {
+  const boyut = statSync(dosya).size;
+  if (boyut <= TAM_OKU_TAVAN) return readFileSync(dosya, "utf8").split(/\r?\n/);
+  const fd = openSync(dosya, "r");
+  try {
+    const buf = Buffer.alloc(TAM_OKU_TAVAN);
+    readSync(fd, buf, 0, TAM_OKU_TAVAN, boyut - TAM_OKU_TAVAN);
+    const metin = buf.toString("utf8");
+    const ilkNl = metin.indexOf("\n");
+    return metin.slice(ilkNl + 1).split(/\r?\n/);
+  } finally {
+    closeSync(fd);
+  }
 }
 
 // Haftalik rollup: yalniz HEDEF haftanin kayitlari suzulur (P1-4 duzeltmesi).
@@ -29,7 +47,7 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
   // K-0032 (v0.21): hiz/kalite sinyal biriktiricileri
   let tpsToplam = 0, tpsAdet = 0, testKosuToplam = 0, testKirmiziToplam = 0, halRefToplam = 0, halKirikToplam = 0, stallToplam = 0, stallAdet = 0;
   const dosyaTurlari = new Map<string, number[]>();
-  for (const satir of readFileSync(tel, "utf8").split(/\r?\n/)) {
+  for (const satir of telemetriSatirlari(tel)) {
     if (!satir.trim()) continue;
     try {
       const r = JSON.parse(satir) as Record<string, unknown>;
