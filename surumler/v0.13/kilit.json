@@ -1,0 +1,10 @@
+{
+    "etiket":  "v0.13-kilit",
+    "tarih":  "2026-10-13",
+    "commit":  "cdd7f69",
+    "doctor":  null,
+    "hedefler":  null,
+    "eksenPuanlari":  null,
+    "ekOzet":  "permission rg/find bayrak kapisi + roller traversal normalizasyonu + agent.closed tam temizlik; test suite yesil",
+    "not":  "K-0025 guvenlik uclusu: A2-1/A2-2/A2-3"
+}
