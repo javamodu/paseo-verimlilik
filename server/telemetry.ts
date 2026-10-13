@@ -3,7 +3,7 @@ import { mkdirSync, appendFileSync, readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { PluginHookAgent, PluginTurnOutcome } from "@getpaseo/plugin/server";
 import type { AgentTimelineItem, AgentUsage } from "@getpaseo/protocol/agent-types";
-import { editCagrilari, turCagrilari } from "./inspect";
+import { editCagrilari, turCagrilari, latestOutputText } from "./inspect";
 import { katmanKokuBul } from "./sozlesme";
 import { PLUGIN_SURUM } from "./surum";
 import { rolCoz } from "./roller";
@@ -39,6 +39,11 @@ export interface TelemetriKayit {
   butceBytes?: number;
   detay?: string;
   locDelta?: number | null;
+  decodeTps?: number;
+  testKosu?: number;
+  testKirmizi?: number;
+  halRef?: number;
+  halKirik?: number;
   editDosyalari?: string[];
 }
 
@@ -100,6 +105,35 @@ export function telemetriYaz(cwd: string, kayit: TelemetriKayit): void {
   } catch (error) {
     console.error("[paseo-verimlilik] telemetri yazim hatasi", error);
   }
+}
+
+// K-0032 (v0.21): saf metrik yardimcilari
+export function decodeTpsHesap(outTok: number | undefined, turSn: number | undefined): number | null {
+  if (!outTok || !turSn || turSn <= 0) return null;
+  return Math.round((outTok / turSn) * 10) / 10;
+}
+
+const TEST_KOMUTU = /\b(npm (run )?test(:\w+)?|npx (vitest|jest)|vitest|jest|go test|pytest|cargo test)\b/;
+export function testKomutuMu(cmd: string): boolean {
+  return TEST_KOMUTU.test(cmd);
+}
+
+// K-0032 (v0.21): halusinasyon proxy'si — cikti metnindeki dosya:satir referanslari diske karsi dogrulanir.
+const HAL_DESEN = /(?:^|[\s(`"'])((?:[\w.\-]+[\/\\])*[\w.\-]+\.(?:ts|tsx|js|mjs|py|md|go|rs|json)):(\d{1,6})\b/g;
+export function halRefTara(metin: string, cwd: string): { toplam: number; kirik: number } {
+  let toplam = 0, kirik = 0;
+  HAL_DESEN.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = HAL_DESEN.exec(metin)) !== null && toplam < 10) {
+    toplam++;
+    try {
+      const p = join(cwd, m[1]);
+      if (!existsSync(p)) { kirik++; continue; }
+      const satirSayisi = readFileSync(p, "utf8").split(/\r?\n/).length;
+      if (parseInt(m[2], 10) > satirSayisi) kirik++;
+    } catch { kirik++; }
+  }
+  return { toplam, kirik };
 }
 
 // K-0032 (v0.20, BK-02): tur baslangic HEAD'i — commit-aware locDelta icin.
@@ -172,6 +206,12 @@ export function turKaydet(input: {
     if (usage.outputTokens) detayParca.push(`out=${usage.outputTokens}`);
   }
   aktifTur = Math.max(0, aktifTur - 1);
+  // K-0032 (v0.21): hiz/kalite sinyalleri
+  const t0v21 = turBaslangiclari.get(input.agent.id);
+  const turSnV21 = t0v21 ? Math.round((Date.now() - t0v21) / 1000) : undefined;
+  const testKosuV21 = shell.filter((o) => o.exitCode !== undefined && o.exitCode !== null && testKomutuMu(o.command ?? "")).length;
+  const testKirmiziV21 = shell.filter((o) => o.exitCode !== undefined && o.exitCode !== null && o.exitCode !== 0 && testKomutuMu(o.command ?? "")).length;
+  const halV21 = halRefTara(latestOutputText(input.timeline), input.agent.cwd);
   // K-0032 (v0.19): baslangic snapshot'i ile fark; git'siz ortamda null.
   const locBaslangic = locBaslangiclari.get(input.agent.id);
   locBaslangiclari.delete(input.agent.id);
@@ -204,7 +244,12 @@ export function turKaydet(input: {
     turnId: input.turnId,
     outcome: input.outcome.kind,
     turSayisi: turSayaclari.get(input.agent.id) ?? 1,
-    turSn: (() => { const t0 = turBaslangiclari.get(input.agent.id); return t0 ? Math.round((Date.now() - t0) / 1000) : undefined; })(),
+    turSn: turSnV21,
+    decodeTps: decodeTpsHesap(usage?.outputTokens ?? undefined, turSnV21) ?? undefined,
+    testKosu: testKosuV21 || undefined,
+    testKirmizi: testKirmiziV21 || undefined,
+    halRef: halV21.toplam || undefined,
+    halKirik: halV21.kirik || undefined,
     toolCalls: ozetler.length,
     shellCalls: shell.length,
     editCalls: edits.length,

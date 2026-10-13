@@ -26,6 +26,8 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
   let altAjanTur = 0;
   // K-0032 (v0.19): LOC + rework olcumleri
   let toplamLocDelta = 0, locAdet = 0, toplamEdit = 0, ciftLoc = 0, ciftSn = 0;
+  // K-0032 (v0.21): hiz/kalite sinyal biriktiricileri
+  let tpsToplam = 0, tpsAdet = 0, testKosuToplam = 0, testKirmiziToplam = 0, halRefToplam = 0, halKirikToplam = 0, stallToplam = 0, stallAdet = 0;
   const dosyaTurlari = new Map<string, number[]>();
   for (const satir of readFileSync(tel, "utf8").split(/\r?\n/)) {
     if (!satir.trim()) continue;
@@ -41,6 +43,9 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
         if (r.finishGateDurtme) fg++;
         if (typeof r.turSn === "number") { turSnToplam += r.turSn; turSnAdet++; }
         if (typeof r.locDelta === "number") { toplamLocDelta += r.locDelta; locAdet++; if (typeof r.turSn === "number") { ciftLoc += r.locDelta; ciftSn += r.turSn; } }
+        if (typeof r.decodeTps === "number") { tpsToplam += r.decodeTps; tpsAdet++; }
+        if (typeof r.testKosu === "number") { testKosuToplam += r.testKosu; testKirmiziToplam += (typeof r.testKirmizi === "number" ? r.testKirmizi : 0); }
+        if (typeof r.halRef === "number") { halRefToplam += r.halRef; halKirikToplam += (typeof r.halKirik === "number" ? r.halKirik : 0); }
         if (Array.isArray(r.editDosyalari)) {
           for (const d of r.editDosyalari) {
             if (typeof d !== "string") continue;
@@ -64,6 +69,8 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
       } else if (r.tip === "karisiklik") {
         karisiklik++;
       } else if (r.tip === "lint" && typeof r.detay === "string" && r.detay.startsWith("pitbull-durtme")) {
+        const sm = r.detay.match(/stallSn=(\d+)/);
+        if (sm) { stallToplam += parseInt(sm[1], 10); stallAdet++; }
         pitbull++;
       }
     } catch {
@@ -89,6 +96,10 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
     if (rework) reworkEdit += zamanlar.length;
   }
   const reworkOrani = toplamEdit > 0 ? Math.round((reworkEdit / toplamEdit) * 1000) / 1000 : null;
+  const ortTps = tpsAdet > 0 ? Math.round((tpsToplam / tpsAdet) * 10) / 10 : null;
+  const testKirmiziOrani = testKosuToplam > 0 ? Math.round((testKirmiziToplam / testKosuToplam) * 1000) / 10 : null;
+  const halKirikOrani = halRefToplam > 0 ? Math.round((halKirikToplam / halRefToplam) * 1000) / 10 : null;
+  const ortStallSn = stallAdet > 0 ? Math.round(stallToplam / stallAdet) : null;
   const saatlikLoc = ciftSn > 0 ? Math.round(ciftLoc / (ciftSn / 3600)) : null; // K-0032 (R3-06): pay=payda ayni alt-kume (locDelta+turSn birlikte)
   const etkinLoc = locAdet > 0 ? Math.round(toplamLocDelta * (1 - (reworkOrani ?? 0))) : null;
   const oran = kabulOrani !== null ? "%" + Math.round(kabulOrani) + " (" + kabul + "/" + kabulToplam + ")" : "henüz veri yok";
@@ -123,6 +134,7 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
     "- Ort. cache-hit (token-ağırlıklı): " + (ortCache !== null ? "%" + ortCache : "—") + " — formül: Σ(cacheHitPct×in) / Σ(in); in yoksa ağırlık=1 (K-0028, A4-1)",
     "- Alt-ajan turları: " + altAjanTur + (altAjanTur === 0 ? " (harness spawn'ları bu sayıma girmez — REHBER §8)" : ""),
     "- Kabul kapsamı: " + kabulKapsam,
+    "- METRIK (v0.21): decode " + (ortTps !== null ? ortTps + " tok/sn" : "\u2014") + " | test-kirmizi " + (testKirmiziOrani !== null ? "%" + testKirmiziOrani + " (" + testKirmiziToplam + "/" + testKosuToplam + ")" : "\u2014") + " | halusinasyon-ref " + (halKirikOrani !== null ? "%" + halKirikOrani + " kirik (" + halKirikToplam + "/" + halRefToplam + ")" : "\u2014") + " | ort stall " + (ortStallSn !== null ? ortStallSn + "sn" : "\u2014"),
     deltaSatir,
     "- LOC (K-0032): toplam " + (locAdet > 0 ? String(toplamLocDelta) : "\u2014") + " | saatlik " + (saatlikLoc !== null ? String(saatlikLoc) : "\u2014") + " | rework " + (reworkOrani !== null ? "%" + Math.round(reworkOrani * 100) : "\u2014") + " (T: paralel turlerde sisme payi icerir)" + " | etkin " + (etkinLoc !== null ? String(etkinLoc) : "\u2014"),
     "",
@@ -132,6 +144,7 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
     loop, finishGate: fg, pitbull, karisiklik, ortCacheHit: ortCache,
     altAjanTur, kabulKayit: kabulToplam, delta: deltaObj,
     toplamLocDelta, saatlikLoc, reworkOrani, etkinLoc,
+    ortDecodeTps: ortTps, testKirmiziOrani, halKirikOrani, ortStallSn,
   };
   mkdirSync(dir, { recursive: true });
   writeFileSync(hedefDosya, md, "utf8");

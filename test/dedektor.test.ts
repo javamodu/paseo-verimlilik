@@ -868,6 +868,23 @@ assert(modCoz(mTmp, "codex", undefined)?.ad === "firtina", "undefined model: pro
     tk7({ agent: { id: "loc-2", cwd: gTmp, provider: "codex" }, turnId: "t", outcome: { kind: "completed" }, timeline: [], usage: null, model: null, mod: null, loopDurtme: false, finishGateDurtme: false } as never);
     const satir7b = JSON.parse(fspM.readFileSync(td7(gTmp), "utf8").trim().split("\n").pop()!);
     assert(satir7b.locDelta === null, "turBaslat'siz turKaydet locDelta null");
+    // v0.21: saf metrik yardimcilari + turKaydet entegrasyonu
+    {
+      const { decodeTpsHesap, testKomutuMu, halRefTara } = await import("../server/telemetry");
+      assert(decodeTpsHesap(100, 50) === 2, "v0.21: decodeTps 100/50=2");
+      assert(decodeTpsHesap(undefined, 50) === null && decodeTpsHesap(100, 0) === null, "v0.21: decodeTps guard");
+      assert(testKomutuMu("npm test") && testKomutuMu("go test ./...") && testKomutuMu("npm run test:unit"), "v0.21: test komutlari taninir");
+      assert(!testKomutuMu("echo test") && !testKomutuMu("npm install"), "v0.21: test-olmayan taninmaz");
+      const hTmp = fspM.mkdtempSync(osM.tmpdir() + "/hal-");
+      fspM.writeFileSync(hTmp + "/a.ts", "s1\ns2\ns3\n");
+      const halSonuc = halRefTara("a.ts:2 gecerli; yok.ts:9 kirik; a.ts:99 asim", hTmp);
+      assert(halSonuc.toplam === 3 && halSonuc.kirik === 2, "v0.21: halRefTara 3 toplam 2 kirik: " + JSON.stringify(halSonuc));
+      fspM.rmSync(hTmp, { recursive: true, force: true });
+    }
+    tb7("v21-1", gTmp);
+    tk7({ agent: { id: "v21-1", cwd: gTmp, provider: "codex" }, turnId: "t", outcome: { kind: "completed" }, timeline: [tc("exec", "shell", { command: "npm test", exitCode: 1 })], usage: { outputTokens: 100 }, model: null, mod: null, loopDurtme: false, finishGateDurtme: false } as never);
+    const satirV21 = JSON.parse(fspM.readFileSync(td7(gTmp), "utf8").trim().split("\n").pop()!);
+    assert(satirV21.testKosu === 1 && satirV21.testKirmizi === 1, "v0.21: testKosu/testKirmizi yazildi: " + satirV21.testKosu + "/" + satirV21.testKirmizi);
     // v0.20 (BK-02): commit-aware locDelta — tur icinde commit atilirsa satirlar pozitif sayilir
     const cp7 = await import("node:child_process");
     const rTmp3 = fspM.mkdtempSync(osM.tmpdir() + "/locgit-");
@@ -911,6 +928,8 @@ assert(modCoz(mTmp, "codex", undefined)?.ad === "firtina", "undefined model: pro
       { ts: new Date(t0 - 2 * 3600e3).toISOString(), tip: "tur", locDelta: 100, editDosyalari: ["a.ts"] },
       { ts: new Date(t0 - 1 * 3600e3).toISOString(), tip: "tur", locDelta: 50, editDosyalari: ["a.ts", "b.ts"] },
       { ts: simdi7.toISOString(), tip: "tur", locDelta: 30, turSn: 3600, editDosyalari: ["c.ts"] },
+      { ts: simdi7.toISOString(), tip: "tur", decodeTps: 20, testKosu: 2, testKirmizi: 1, halRef: 4, halKirik: 1 },
+      { ts: simdi7.toISOString(), tip: "lint", detay: "pitbull-durtme sinif=yazici stallSn=480" },
     ];
     fspM.writeFileSync(rTmp + "/.verimlilik/telemetri.jsonl", kayitlar.map((k) => JSON.stringify(k)).join("\n") + "\n");
     const yol7 = hr7(rTmp, simdi7);
@@ -921,6 +940,10 @@ assert(modCoz(mTmp, "codex", undefined)?.ad === "firtina", "undefined model: pro
     assert(j7.reworkOrani === 0.5, "reworkOrani = 2/4: " + j7.reworkOrani);
     assert(j7.etkinLoc === 90, "etkinLoc = 180 * 0.5: " + j7.etkinLoc);
     assert(fspM.readFileSync(yol7!, "utf8").includes("rework"), "md rework satiri icerir");
+    assert(j7.ortDecodeTps === 20, "v0.21: ortDecodeTps=20: " + j7.ortDecodeTps);
+    assert(j7.testKirmiziOrani === 50, "v0.21: testKirmiziOrani=50 (1/2): " + j7.testKirmiziOrani);
+    assert(j7.halKirikOrani === 25, "v0.21: halKirikOrani=25 (1/4): " + j7.halKirikOrani);
+    assert(j7.ortStallSn === 480, "v0.21: ortStallSn=480: " + j7.ortStallSn);
     const rTmp2 = fspM.mkdtempSync(osM.tmpdir() + "/rol2-");
     fspM.mkdirSync(rTmp2 + "/.verimlilik", { recursive: true });
     fspM.writeFileSync(rTmp2 + "/.verimlilik/telemetri.jsonl", JSON.stringify({ ts: simdi7.toISOString(), tip: "tur", locDelta: 10 }) + "\n");
