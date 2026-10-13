@@ -88,7 +88,7 @@ void (async () => {
   assert(await finishGateKontrol("t3", editliKanitli, mockContext) === false && gonderilen === 0, "editli + exit-0 testli turda finish-gate susar");
 
   const { izinKarari } = await import("../server/permission");
-  const { pitbullTurBasladi, pitbullTurBitti, pitbullTara, _testIcinDurumVer } = await import("../server/pitbull");
+  const { pitbullAktivite, pitbullTurBasladi, pitbullTurBitti, pitbullTara, _testIcinDurumVer } = await import("../server/pitbull");
 
   assert(izinKarari("git status") === "allow", "git status allow");
   assert(izinKarari("rg --files") === "allow", "rg allow");
@@ -171,6 +171,24 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
   const rBayat = pitbullTara(harita4, async () => { throw new Error("olmamali"); });
   assert(rBayat.dirtulen === 0 && _testIcinDurumVer("pb4")!.turBaslangic === null, "bayat tur (25sa) durtme uretmez, sifirlanir");
   assert(sonMetin.includes("yazım kümesi sessiz"), "yazici durtmesi yazim-kumesi sinifini bildirir");
+  // K-0033: stall artik tur suresi degil, son aktiviteden olculur (uzun ama aktif turda sahte durtme yok)
+  const aj5 = { id: "pb5", cwd: pbTmp, provider: "qoder" } as never;
+  const harita5 = new Map<string, never>([["pb5", aj5]]);
+  let giden5 = 0;
+  const gonder5 = async () => { giden5++; };
+  pitbullTurBasladi("pb5", Date.now() - 30 * 60_000);
+  pitbullAktivite("pb5", Date.now() - 2 * 60_000);
+  _testIcinDurumVer("pb5")!.sonDurtme = 0;
+  const rAktiv1 = pitbullTara(harita5, gonder5);
+  assert(rAktiv1.dirtulen === 0 && giden5 === 0, "30dk acik tur ama 2dk once aktivite: pitbull susar");
+  pitbullAktivite("pb5", Date.now() - 25 * 60_000);
+  _testIcinDurumVer("pb5")!.sonDurtme = 0;
+  const rAktiv2 = pitbullTara(harita5, gonder5);
+  assert(rAktiv2.dirtulen === 1 && giden5 === 1, "25dk aktivitesizlik: pitbull durtur (okuyucu esigi 20dk)");
+  // aktivite, tur kapaliyken yok sayilir (state sizintisi yok)
+  pitbullTurBitti("pb5");
+  pitbullAktivite("pb5");
+  assert(_testIcinDurumVer("pb5")!.sonAktivite === null, "tur bitince sonAktivite sifirlanir, tur-disi aktivite yok sayilir");
   harita.delete("pb2");
   fspM.rmSync(pbTmp, { recursive: true, force: true });
 
@@ -816,6 +834,28 @@ assert(modCoz(mTmp, "codex", undefined)?.ad === "firtina", "undefined model: pro
     assert(giden3.length === 1, "A3-4: callId'siz item yeniden sayilir ama cooldown susar");
     bTemizle("a37");
     fspM.rmSync(bTmp2, { recursive: true, force: true });
+  }
+  {
+    // BK-01 + D2-15: callId'siz dedupe + reload dayanikliligi + gorulen tavani
+    const { briefTara: bt3, briefKontrol: bk3, _testIcinBriefSifirla: bSifirla } = await import("../server/brief");
+    const gor = new Set<string>();
+    const idssiz2 = [{ type: "tool_call", name: "spawn", detail: { type: "sub_agent", description: "kisa ozet" }, status: "completed", error: null } as never];
+    assert(bt3(idssiz2, gor).toplam === 1, "BK-01: ilk tarama sayar");
+    assert(bt3(idssiz2, gor).toplam === 0, "BK-01: callId'siz ayni metin ikinci taramada dedupe'lanir");
+    const cok: never[] = [];
+    for (let i = 0; i < 600; i++) cok.push({ type: "tool_call", name: "s" + i, detail: { type: "sub_agent", description: "kisa " + i }, status: "completed", error: null } as never);
+    const gor2 = new Set<string>();
+    bt3(cok, gor2);
+    assert(gor2.size <= 500, "D2-15: gorulen kumesi 500 tavaninda budanir");
+    const bkTmp = fspM.mkdtempSync(osM.tmpdir() + "/bk01-");
+    const giden5: string[] = [];
+    const ctx5 = { paseo: { agents: { ref: () => ({ send: async (m: string) => { giden5.push(m); } }) } } } as never;
+    assert(await bk3("bk01a", bkTmp, "codex", idssiz2, ctx5) === true, "BK-01: ilk tur durtur");
+    assert(fspM.existsSync(bkTmp + "/.verimlilik/brief-state.json"), "BK-01: durum diske yazildi");
+    bSifirla();
+    assert(await bk3("bk01a", bkTmp, "codex", idssiz2, ctx5) === false, "BK-01: reload sonrasi ayni timeline yeniden durtmez");
+    assert(giden5.length === 1, "BK-01: reload'da durtme tekrarlanmaz");
+    fspM.rmSync(bkTmp, { recursive: true, force: true });
   }
   {
     const { panoIsaretciYaz: piY } = await import("../server/bekci");
