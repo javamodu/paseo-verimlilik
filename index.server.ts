@@ -2,7 +2,7 @@ import type { PluginServerContext } from "@getpaseo/plugin/server";
 import type { PluginHookAgent } from "@getpaseo/plugin/server";
 import type { PaseoApi } from "@getpaseo/client";
 import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
-import { sozlesmeEnjekte, telemetriOzet, sonDegerlendirme, modDurum, modAyarla } from "./shared/contracts";
+import { sozlesmeEnjekte, telemetriOzet, sonDegerlendirme, modDurum, modAyarla, panoDurum } from "./shared/contracts";
 import { enjeksiyonMetni } from "./server/sozlesme";
 import { kabulKaydet, karisiklikKaydet, lintKaydet, telemetriOzetle, turBaslat, turKaydet } from "./server/telemetry";
 import { loopKontrol } from "./server/loopguard";
@@ -22,6 +22,7 @@ import { sonDegerlendirmeOku } from "./server/degerlendirme";
 import { basarisizOranMesaji } from "./server/kalite";
 import { modCoz, modDurumOku, modAyarla as modAyarlaUygula, contextRotOrani, rotDurtmeliMi } from "./server/modlar";
 import { ajanTemizleHepsi } from "./server/temizlik";
+import { panoBaslat } from "./server/pano";
 
 
 interface TurState {
@@ -220,7 +221,11 @@ export default function contribute(server: PluginServerContext) {
   server.handle(telemetriOzet, ({ cwd }) => telemetriOzetle(cwd));
   server.handle(modDurum, ({ cwd }) => modDurumOku(cwd));
   server.handle(modAyarla, ({ cwd, mod, provider, model }) => modAyarlaUygula(cwd, mod, provider, model));
+  const pano = panoBaslat(() => paseoRef);
+  removers.push(pano.kapat);
+
   server.handle(sonDegerlendirme, ({ cwd }) => sonDegerlendirmeOku(cwd));
+  server.handle(panoDurum, (_input, { paseo }) => { paseoRef = paseo; return pano.durum(); });
 
   return () => {
     for (const remove of removers) remove();

@@ -68,3 +68,17 @@ export const sonDegerlendirme = defineRpc({
     kilitler: z.array(z.string()),
   }),
 });
+
+export const panoDurum = defineRpc({
+  name: "pano.durum",
+  input: z.object({}),
+  output: z.object({
+    ok: z.boolean(),
+    port: z.number(),
+    uiDir: z.string(),
+    uiVar: z.boolean(),
+    paseoBagli: z.boolean(),
+    yazma: z.boolean(),
+    dinliyor: z.boolean(),
+  }),
+});

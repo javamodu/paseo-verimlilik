@@ -3,6 +3,7 @@ import { sozlesmeEnjekte, modAyarla } from "./shared/contracts";
 import { TelemetriEkrani } from "./client/telemetri";
 import { DegerlendirmeEkrani } from "./client/degerlendirme";
 import { ModEkrani } from "./client/mod";
+import { PanoPanel } from "./client/pano-panel";
 
 export default function contribute(client: PluginClientContext) {
   client.addCommandCenterItem({
@@ -76,6 +77,14 @@ export default function contribute(client: PluginClientContext) {
       const r = await rpc(modAyarla, { cwd: workspace.directory, mod: modAd, provider, model: modelDeseni });
       if (!r.ok) throw new Error(r.mesaj);
     },
+  });
+
+  client.addWorkspacePanel({
+    id: "pano",
+    title: "Pano",
+    icon: "LayoutDashboard",
+    context: "workspace",
+    Component: PanoPanel,
   });
 
   return () => {};
