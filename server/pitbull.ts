@@ -1,5 +1,5 @@
 import type { PluginHookAgent, PluginHookContext } from "@getpaseo/plugin/server";
-import { telemetriYaz } from "./telemetry";
+import { telemetriYaz, sonAktifSureKaydet } from "./telemetry";
 import { ayarOku, VARSAYILAN_AYAR, type VerimlilikAyar } from "./ayar";
 import { modCoz } from "./modlar";
 
@@ -62,8 +62,15 @@ export function pitbullAktivite(agentId: string, simdi?: number): void {
   s.sonAktivite = simdi ?? Date.now();
 }
 
+// v0.22: tur kapanirken son-aktivite bazli aktif calisma suresi telemetry'ye birakilir (turKaydet okur).
+// turSn duvar saati beklemeyi de sayar; aktifSn yalniz son aktiviteye kadar olan calismadir.
+// Not: depo telemetry.ts'de — pitbull->telemetry import yonu korunur (dongu yok).
 export function pitbullTurBitti(agentId: string, editliMi = false): void {
   const s = stateAl(agentId);
+  if (s.turBaslangic !== null) {
+    const referans = s.sonAktivite ?? s.turBaslangic;
+    sonAktifSureKaydet(agentId, Math.max(0, referans - s.turBaslangic));
+  }
   s.turBaslangic = null;
   s.sonAktivite = null;
   s.ardisikStall = 0;

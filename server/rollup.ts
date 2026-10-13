@@ -40,7 +40,7 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
   if (!existsSync(tel)) return null;
 
   let tur = 0, kabul = 0, ret = 0, karisiklik = 0, loop = 0, fg = 0, pitbull = 0;
-  let turSnToplam = 0, turSnAdet = 0, cacheAgirlikli = 0, cacheAgirlik = 0;
+  let turSnToplam = 0, turSnAdet = 0, aktifToplam = 0, aktifAdet = 0, cacheAgirlikli = 0, cacheAgirlik = 0;
   let altAjanTur = 0;
   // K-0032 (v0.19): LOC + rework olcumleri
   let toplamLocDelta = 0, locAdet = 0, toplamEdit = 0, ciftLoc = 0, ciftSn = 0;
@@ -60,6 +60,7 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
         if (r.loopDurtme) loop++;
         if (r.finishGateDurtme) fg++;
         if (typeof r.turSn === "number") { turSnToplam += r.turSn; turSnAdet++; }
+        if (typeof r.aktifSn === "number") { aktifToplam += r.aktifSn; aktifAdet++; }
         if (typeof r.locDelta === "number") { toplamLocDelta += r.locDelta; locAdet++; if (typeof r.turSn === "number") { ciftLoc += r.locDelta; ciftSn += r.turSn; } }
         if (typeof r.decodeTps === "number") { tpsToplam += r.decodeTps; tpsAdet++; }
         if (typeof r.testKosu === "number") { testKosuToplam += r.testKosu; testKirmiziToplam += (typeof r.testKirmizi === "number" ? r.testKirmizi : 0); }
@@ -103,6 +104,7 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
   const kabulToplam = kabul + ret;
   const kabulOrani = kabulToplam > 0 ? Math.round((kabul / kabulToplam) * 1000) / 10 : null;
   const ortTurSn = turSnAdet > 0 ? Math.round(turSnToplam / turSnAdet) : null;
+  const ortAktifSn = aktifAdet > 0 ? Math.round(aktifToplam / aktifAdet) : null; // v0.22: bekleme-haric calisma
   const ortCache = cacheAgirlik > 0 ? Math.round((cacheAgirlikli / cacheAgirlik) * 10) / 10 : null;
   // K-0032: ayni dosya 24 saat icinde birden fazla turda editlendiyse rework sayilir.
   // R3-05: yalniz pencere-ici tekrar editler sayilir (eskiden eslesen dosyanin tum gecmisi rework'e katilirdi).
@@ -145,7 +147,7 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
     "",
     "Kaynak: .verimlilik/telemetri.jsonl (mekanik rollup, LLM'siz; yalnız " + hafta + " kayıtları) · Üretim: " + simdi.toISOString().slice(0, 10),
     "",
-    "- Tur: " + tur + " · ort. tur süresi: " + (ortTurSn !== null ? ortTurSn + "sn" : "—"),
+    "- Tur: " + tur + " · ort. tur süresi: " + (ortTurSn !== null ? ortTurSn + "sn" : "—") + " · aktif: " + (ortAktifSn !== null ? ortAktifSn + "sn" : "—") + " (bekleme-haric, v0.22)",
     "- Kabul oranı: " + oran + " (desen tabanlı, T)",
     "- Dürtmeler: loop " + loop + " · finish-gate " + fg + " · pitbull " + pitbull,
     "- Anlaşılmazlık: " + karisiklik,
@@ -158,7 +160,7 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
     "",
   ].join("\n");
   const json = {
-    hafta, uretim: simdi.toISOString(), tur, ortTurSn, kabul, ret, kabulOrani,
+    hafta, uretim: simdi.toISOString(), tur, ortTurSn, ortAktifSn, kabul, ret, kabulOrani,
     loop, finishGate: fg, pitbull, karisiklik, ortCacheHit: ortCache,
     altAjanTur, kabulKayit: kabulToplam, delta: deltaObj,
     toplamLocDelta, saatlikLoc, reworkOrani, etkinLoc,

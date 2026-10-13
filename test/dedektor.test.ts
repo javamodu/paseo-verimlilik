@@ -943,6 +943,37 @@ assert(modCoz(mTmp, "codex", undefined)?.ad === "firtina", "undefined model: pro
     fspM.rmSync(dTmp, { recursive: true, force: true });
   }
   {
+    // v0.22: aktifSn — son-aktivite bazli calisma suresi (duvar saati degil)
+    const { turKaydet: tk8, telemetriDosyasi: td8b } = await import("../server/telemetry");
+    const { pitbullTurBasladi: pb8, pitbullAktivite: pa8, pitbullTurBitti: pbBit8 } = await import("../server/pitbull");
+    const aTmp = fspM.mkdtempSync(osM.tmpdir() + "/a22-");
+    const t0 = Date.parse("2026-10-14T10:00:00Z");
+    pb8("a22", t0);
+    pa8("a22", t0 + 30_000);
+    pbBit8("a22", true);
+    tk8({ agent: { id: "a22", cwd: aTmp, provider: "codex" }, turnId: "t", outcome: { kind: "completed" }, timeline: [], usage: null, model: null, mod: null, loopDurtme: false, finishGateDurtme: false } as never);
+    const s8 = JSON.parse(fspM.readFileSync(td8b(aTmp), "utf8").trim().split("\n").pop()!);
+    assert(s8.aktifSn === 30, "v0.22: aktifSn son-aktivite bazli (30sn): " + s8.aktifSn);
+    tk8({ agent: { id: "a22b", cwd: aTmp, provider: "codex" }, turnId: "t2", outcome: { kind: "completed" }, timeline: [], usage: null, model: null, mod: null, loopDurtme: false, finishGateDurtme: false } as never);
+    const s8b = JSON.parse(fspM.readFileSync(td8b(aTmp), "utf8").trim().split("\n").pop()!);
+    assert(s8b.aktifSn === undefined, "v0.22: pitbull gormediyse aktifSn yazilmaz");
+    fspM.rmSync(aTmp, { recursive: true, force: true });
+    const { haftalikRollup: hr9, isoHafta: ih9 } = await import("../server/rollup");
+    const roTmp = fspM.mkdtempSync(osM.tmpdir() + "/a22r-");
+    fspM.mkdirSync(roTmp + "/.verimlilik", { recursive: true });
+    const simdi9 = new Date();
+    fspM.writeFileSync(roTmp + "/.verimlilik/telemetri.jsonl", [
+      JSON.stringify({ ts: simdi9.toISOString(), tip: "tur", turSn: 600, aktifSn: 120 }),
+      JSON.stringify({ ts: simdi9.toISOString(), tip: "tur", turSn: 300, aktifSn: 240 }),
+      JSON.stringify({ ts: simdi9.toISOString(), tip: "tur", turSn: 100 }),
+    ].join("\n") + "\n");
+    const yol9 = hr9(roTmp, simdi9);
+    const j9 = JSON.parse(fspM.readFileSync(roTmp + "/raporlar/telemetri-haftalik/" + ih9(simdi9) + ".json", "utf8"));
+    assert(j9.ortAktifSn === 180, "v0.22: rollup ortAktifSn ((120+240)/2=180): " + j9.ortAktifSn);
+    assert(fspM.readFileSync(yol9!, "utf8").includes("bekleme-haric"), "v0.22: md aktif-sure satiri icerir");
+    fspM.rmSync(roTmp, { recursive: true, force: true });
+  }
+  {
     const { panoIsaretciYaz: piY } = await import("../server/bekci");
     const pTmp = fspM.mkdtempSync(osM.tmpdir() + "/a35-");
     fspM.writeFileSync(pTmp + "/STATE_BOARD.md", "# Pano\n## Baska\n");

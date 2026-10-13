@@ -39,6 +39,7 @@ export interface TelemetriKayit {
   butceBytes?: number;
   detay?: string;
   locDelta?: number | null;
+  aktifSn?: number;
   decodeTps?: number;
   testKosu?: number;
   testKirmizi?: number;
@@ -73,9 +74,21 @@ function locSnapshot(cwd: string): number | null {
 }
 
 // K-0025 (A2-1): agent.closed sonrasi bellek sizintisini onler.
+// v0.22: son-aktivite bazli aktif calisma suresi deposu (pitbull turBitti yazar, turKaydet okur+siler).
+const sonAktifSure = new Map<string, number>();
+export function sonAktifSureKaydet(agentId: string, ms: number): void {
+  sonAktifSure.set(agentId, ms);
+}
+function sonAktifSureAl(agentId: string): number | null {
+  const v = sonAktifSure.get(agentId);
+  sonAktifSure.delete(agentId);
+  return v ?? null;
+}
+
 export function ajanTemizle(agentId: string): void {
   turSayaclari.delete(agentId);
   locBaslangiclari.delete(agentId);
+  sonAktifSure.delete(agentId);
   // K-0029 (A2-6): acik turu kapanmadan kapanan ajan aktifTur'u sisirmesin.
   if (turBaslangiclari.delete(agentId)) {
     aktifTur = Math.max(0, aktifTur - 1);
@@ -271,6 +284,7 @@ export function turKaydet(input: {
     outcome: input.outcome.kind,
     turSayisi: turSayaclari.get(input.agent.id) ?? 1,
     turSn: turSnV21,
+    aktifSn: (() => { const ms = sonAktifSureAl(input.agent.id); return ms !== null ? Math.round(ms / 1000) : undefined; })(),
     decodeTps: decodeTpsHesap(usage?.outputTokens ?? undefined, turSnV21) ?? undefined,
     testKosu: testKosuV21 || undefined,
     testKirmizi: testKirmiziV21 || undefined,
