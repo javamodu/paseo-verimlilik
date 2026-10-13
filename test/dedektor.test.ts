@@ -671,6 +671,54 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
     assert(true, "ajanTemizleHepsi tum modullerde hatasiz calisti");
   }
 
+  // v0.14 (K-0026, A3-1): loopguard — 3x hash, A-B-A, insan kapisi
+  {
+    const { loopKontrol: lk, ajanTemizle: lTemizle } = await import("../server/loopguard");
+    const giden: string[] = [];
+    const ctx = { paseo: { agents: { ref: () => ({ send: async (m: string) => { giden.push(m); } }) } } } as never;
+    const tl = (cmds: string[]) => cmds.map((c) => tc("exec", "shell", { command: c }));
+    assert(await lk("lg-1", tl(["a1", "a1", "a1"]), ctx) === true, "3x ayni hash: durtme gider");
+    assert(giden.length === 1 && giden[0].includes("loop dedektoru"), "durtme metni gonderildi");
+    assert(await lk("lg-1", tl(["a1", "a1", "a1"]), ctx) === false, "ayni bulgu tekrar durtmez (sonHash)");
+    assert(giden.length === 1, "gonderi sayisi sabit");
+    assert(await lk("lg-1", tl(["b2", "b2", "b2"]), ctx) === true, "farkli hash uclusu yeni bulgu: 2. ardisik durtme");
+    assert(giden.length === 2, "2. durtme gonderildi");
+    assert(await lk("lg-1", tl(["c3", "c3", "c3"]), ctx) === false, "3. farkli bulgu: insan kapisi, durtme yok");
+    assert(giden.length === 2, "insan kapisinda susuldu");
+    lTemizle("lg-1");
+    assert(await lk("lg-1", tl(["x", "y", "x", "y"]), ctx) === true, "A-B-A-B deseni yakalanir");
+    assert(await lk("lg-2", tl(["t1", "t2", "t3"]), ctx) === false, "uc farkli cagri: loop yok");
+    lTemizle("lg-1"); lTemizle("lg-2");
+  }
+  // v0.14 (K-0026, A3-2): enjekteHandler — archived atlama, cwd=null, mod=kapali
+  {
+    const { enjekteHandler: eh } = await import("../server/enjekte");
+    const dKapali2 = fspM.mkdtempSync(osM.tmpdir() + "/enj-");
+    fspM.mkdirSync(dKapali2 + "/.verimlilik", { recursive: true });
+    fspM.writeFileSync(dKapali2 + "/.verimlilik/ayar.json", JSON.stringify({ enjeksiyonMod: "kapali" }));
+    const dNormal = fspM.mkdtempSync(osM.tmpdir() + "/enj-");
+    const giden2: string[] = [];
+    const paseo = { agents: {
+      ref: (id: string) => ({ cwd: dNormal, refresh: async () => ({ agent: { cwd: dNormal } }), send: async () => { giden2.push(id); } }),
+      list: async () => ({ entries: [
+        { agent: { id: "w1", cwd: dNormal, workspaceId: "ws", archivedAt: null } },
+        { agent: { id: "w2", cwd: dKapali2, workspaceId: "ws", archivedAt: null } },
+        { agent: { id: "w3", cwd: null, workspaceId: "ws", archivedAt: null } },
+        { agent: { id: "w4", cwd: dNormal, workspaceId: "ws", archivedAt: "2026-10-13" } },
+        { agent: { id: "w5", cwd: dNormal, workspaceId: "baska", archivedAt: null } },
+      ] }),
+    } };
+    const r1 = await eh({ workspaceId: "ws" }, { paseo } as never);
+    assert(r1.hedef === 3 && r1.gonderildi === 1 && r1.atlandi === 2, "ws: archived+baska-ws disarida, kapali+cwd-null atlandi: " + JSON.stringify(r1));
+    assert(giden2.join(",") === "w1", "yalniz w1'e gonderildi");
+    const r2 = await eh({ agentId: "a1" }, { paseo } as never);
+    assert(r2.gonderildi === 1, "agentId yolu gonderir");
+    const r3 = await eh({}, { paseo } as never);
+    assert(r3.hedef === 0 && typeof r3.not === "string", "idsiz istek reddedilir");
+    fspM.rmSync(dKapali2, { recursive: true, force: true });
+    fspM.rmSync(dNormal, { recursive: true, force: true });
+  }
+
   console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
   process.exit(hata === 0 ? 0 : 1);
 })();
