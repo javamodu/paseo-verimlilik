@@ -12,10 +12,12 @@ const MAKS_OTURUM_DURTME = 5;
 const BAYAT_TUR_MS = 24 * 60 * 60_000;
 const FIRTINA_STALL_ESIK_MS = 8 * 60_000;
 
-// K-0032 (v0.19): firtina modunda agresif takilma tespiti (8dk); diger modlarda ayar degerleri aynen korunur.
+// K-0032 (v0.19): firtina modunda agresif takilma tespiti (taban 8dk); diger modlarda ayar degerleri aynen korunur.
+// R3-08: firtinada kullanicinin daha SIKI ayari (kucuk dk) korunur ve yazici/okuyucu ayrimi surer; gevsek ayar 8dk tabana oturur.
 export function takilmaEsigiMs(modAd: string | null | undefined, yaziciMi = true, ayar: VerimlilikAyar = VARSAYILAN_AYAR): number {
-  if (modAd === "firtina") return FIRTINA_STALL_ESIK_MS;
-  return (yaziciMi ? ayar.pitbullYaziciDk : ayar.pitbullOkuyucuDk) * 60_000;
+  const ayarMs = (yaziciMi ? ayar.pitbullYaziciDk : ayar.pitbullOkuyucuDk) * 60_000;
+  if (modAd === "firtina") return Math.min(FIRTINA_STALL_ESIK_MS, ayarMs);
+  return ayarMs;
 }
 
 interface PitbullState {

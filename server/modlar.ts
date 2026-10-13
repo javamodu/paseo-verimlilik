@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { katmanKokuBul } from "./sozlesme";
 import type { AgentUsage } from "@getpaseo/protocol/agent-types";
@@ -63,16 +63,25 @@ function guvenliRegex(desen: string): RegExp | null {
   try { return new RegExp(desen, "i"); } catch { return null; }
 }
 
+// R3-09: pitbullTara her 60sn taramada stall'lu ajan basina modCoz cagirir — mtime+boyut anahtarli cache (ayarOku deseni).
+const eslesmeCache = new Map<string, { mt: number; boyut: number; deger: ModEslesme[] }>();
+const aktifCache = new Map<string, { mt: number; boyut: number; deger: ModAd | null }>();
+
 export function eslesmeOku(cwd: string): ModEslesme[] {
   // ayar.json modlar.eslesmeler EK listesidir (override degil); kullanici kurallari once denenir.
   try {
     const dosya = join(katmanKokuBul(cwd), ".verimlilik", "ayar.json");
     if (!existsSync(dosya)) return VARSAYILAN_ESLESME;
+    const st = statSync(dosya);
+    const c = eslesmeCache.get(cwd);
+    if (c && c.mt === st.mtimeMs && c.boyut === st.size) return c.deger;
     const ham = JSON.parse(readFileSync(dosya, "utf8")) as Record<string, unknown>;
     const modlar = ham.modlar as Record<string, unknown> | undefined;
     const ek = (modlar?.eslesmeler ?? []) as ModEslesme[];
     const gecerli = ek.filter((e) => e && typeof e.provider === "string" && typeof e.mod === "string" && e.mod in MODLAR);
-    return [...gecerli, ...VARSAYILAN_ESLESME];
+    const deger = [...gecerli, ...VARSAYILAN_ESLESME];
+    eslesmeCache.set(cwd, { mt: st.mtimeMs, boyut: st.size, deger });
+    return deger;
   } catch {
     return VARSAYILAN_ESLESME;
   }
@@ -86,9 +95,14 @@ export function aktifModOku(cwd: string): ModAd | null {
   try {
     const dosya = modStateYolu(cwd);
     if (!existsSync(dosya)) return null;
+    const st = statSync(dosya);
+    const c = aktifCache.get(cwd);
+    if (c && c.mt === st.mtimeMs && c.boyut === st.size) return c.deger;
     const ham = JSON.parse(readFileSync(dosya, "utf8")) as Record<string, unknown>;
     const ad = ham.aktif;
-    return typeof ad === "string" && ad in MODLAR ? (ad as ModAd) : null;
+    const deger = typeof ad === "string" && ad in MODLAR ? (ad as ModAd) : null;
+    aktifCache.set(cwd, { mt: st.mtimeMs, boyut: st.size, deger });
+    return deger;
   } catch {
     return null;
   }

@@ -858,6 +858,27 @@ assert(modCoz(mTmp, "codex", undefined)?.ad === "firtina", "undefined model: pro
     fspM.rmSync(bkTmp, { recursive: true, force: true });
   }
   {
+    // R3-08 + R3-09: firtina esik ayar-saygisi + modlar mtime cache
+    const { takilmaEsigiMs: te2 } = await import("../server/pitbull");
+    const ayar5 = { pitbullYaziciDk: 5, pitbullOkuyucuDk: 3, kapsamEsik: 3, enjeksiyonMod: "tam", bekciKapali: false, k3Bitis: null } as const;
+    assert(te2("firtina", true, ayar5) === 5 * 60_000, "R3-08: firtinada siki kullanici ayari korunur (yazici 5dk)");
+    assert(te2("firtina", false, ayar5) === 3 * 60_000, "R3-08: yazici/okuyucu ayrimi surer (okuyucu 3dk)");
+    assert(te2("firtina", true) === 8 * 60_000, "R3-08: gevsek/varsayilan ayar 8dk tabana oturur");
+    assert(te2(null, true, ayar5) === 5 * 60_000, "R3-08: firtina disi ayar aynen");
+    const { aktifModOku: amo, eslesmeOku: eo2 } = await import("../server/modlar");
+    const mTmp = fspM.mkdtempSync(osM.tmpdir() + "/r39-");
+    fspM.mkdirSync(mTmp + "/.verimlilik", { recursive: true });
+    fspM.writeFileSync(mTmp + "/.verimlilik/mod.json", JSON.stringify({ aktif: "serbest" }) + "\n");
+    assert(amo(mTmp) === "serbest", "R3-09: ilk okuma diskten");
+    fspM.writeFileSync(mTmp + "/.verimlilik/mod.json", JSON.stringify({ aktif: "cerrah" }) + " \n");
+    assert(amo(mTmp) === "cerrah", "R3-09: dosya degisince cache gecersiz (mtime/boyut)");
+    fspM.writeFileSync(mTmp + "/.verimlilik/ayar.json", JSON.stringify({ modlar: { eslesmeler: [{ provider: "codex", modelDeseni: "ozel", mod: "matbaa" }] } }));
+    assert(eo2(mTmp)[0].mod === "matbaa", "R3-09: eslesme ilk okuma");
+    fspM.writeFileSync(mTmp + "/.verimlilik/ayar.json", JSON.stringify({ modlar: { eslesmeler: [{ provider: "codex", modelDeseni: "ozel2", mod: "atolye" }] } }) + " ");
+    assert(eo2(mTmp)[0].mod === "atolye", "R3-09: ayar degisince eslesme cache gecersiz");
+    fspM.rmSync(mTmp, { recursive: true, force: true });
+  }
+  {
     const { panoIsaretciYaz: piY } = await import("../server/bekci");
     const pTmp = fspM.mkdtempSync(osM.tmpdir() + "/a35-");
     fspM.writeFileSync(pTmp + "/STATE_BOARD.md", "# Pano\n## Baska\n");
