@@ -82,3 +82,9 @@ export const panoDurum = defineRpc({
     dinliyor: z.boolean(),
   }),
 });
+
+export const orduEmir = defineRpc({
+  name: "ordu.emir",
+  input: z.object({ cwd: z.string(), emir: z.string() }),
+  output: z.object({ ok: z.boolean(), managerId: z.string().nullable(), mesaj: z.string() }),
+});

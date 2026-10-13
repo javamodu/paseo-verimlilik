@@ -1,5 +1,5 @@
 import type { PluginClientContext } from "@getpaseo/plugin/client";
-import { sozlesmeEnjekte, modAyarla } from "./shared/contracts";
+import { sozlesmeEnjekte, modAyarla, orduEmir } from "./shared/contracts";
 import { TelemetriEkrani } from "./client/telemetri";
 import { DegerlendirmeEkrani } from "./client/degerlendirme";
 import { ModEkrani } from "./client/mod";
@@ -85,6 +85,17 @@ export default function contribute(client: PluginClientContext) {
     icon: "LayoutDashboard",
     context: "workspace",
     Component: PanoPanel,
+  });
+
+  client.addSlashCommand({
+    name: "ordu",
+    description: "Orduya emir ver: manager'a iletilir, gorev yoksa manager yaratilir (F2)",
+    argumentHint: "<emir metni>",
+    context: "workspace",
+    async onSubmit({ args, workspace, rpc }) {
+      const r = await rpc(orduEmir, { cwd: workspace.directory, emir: args });
+      if (!r.ok) throw new Error(r.mesaj);
+    },
   });
 
   return () => {};

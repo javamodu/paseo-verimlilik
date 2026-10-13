@@ -2,7 +2,7 @@ import type { PluginServerContext } from "@getpaseo/plugin/server";
 import type { PluginHookAgent } from "@getpaseo/plugin/server";
 import type { PaseoApi } from "@getpaseo/client";
 import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
-import { sozlesmeEnjekte, telemetriOzet, sonDegerlendirme, modDurum, modAyarla, panoDurum } from "./shared/contracts";
+import { sozlesmeEnjekte, telemetriOzet, sonDegerlendirme, modDurum, modAyarla, panoDurum, orduEmir } from "./shared/contracts";
 import { enjeksiyonMetni } from "./server/sozlesme";
 import { kabulKaydet, karisiklikKaydet, lintKaydet, telemetriOzetle, turBaslat, turKaydet } from "./server/telemetry";
 import { loopKontrol } from "./server/loopguard";
@@ -23,6 +23,8 @@ import { basarisizOranMesaji } from "./server/kalite";
 import { modCoz, modDurumOku, modAyarla as modAyarlaUygula, contextRotOrani, rotDurtmeliMi } from "./server/modlar";
 import { ajanTemizleHepsi } from "./server/temizlik";
 import { panoBaslat } from "./server/pano";
+import { orduDongu, orduAyarOku, aktifWorkerSay, MANAGER_BRIEF } from "./server/ordu";
+import { repolariBul } from "./server/planmd";
 
 
 interface TurState {
@@ -224,8 +226,36 @@ export default function contribute(server: PluginServerContext) {
   const pano = panoBaslat(() => paseoRef);
   removers.push(pano.kapat);
 
+  const orduSayac = setInterval(() => {
+    if (!paseoRef) return;
+    const kokler = (process.env.PANO_KOKLER ?? "D:\\Vibecode").split(";");
+    for (const repo of repolariBul(kokler)) {
+      orduDongu(paseoRef, repo.yol, repo.ad).catch((e) => console.error("[paseo-verimlilik] ordu dongu hatasi", repo.ad, e));
+    }
+  }, 5000);
+  removers.push(() => clearInterval(orduSayac));
+
   server.handle(sonDegerlendirme, ({ cwd }) => sonDegerlendirmeOku(cwd));
   server.handle(panoDurum, (_input, { paseo }) => { paseoRef = paseo; return pano.durum(); });
+  server.handle(orduEmir, async ({ cwd, emir }, { paseo }) => {
+    paseoRef = paseo;
+    if (!emir.trim()) return { ok: false, managerId: null, mesaj: "bos emir" };
+    const ayar = orduAyarOku(cwd);
+    const mevcut = await aktifWorkerSay(paseo, cwd);
+    let managerId = mevcut.managerId;
+    if (!managerId) {
+      const handle = await paseo.agents.create({
+        config: { provider: ayar.managerProvider },
+        cwd,
+        title: "ordu manager",
+        prompt: MANAGER_BRIEF,
+        labels: { ordu: "manager" },
+      } as Parameters<typeof paseo.agents.create>[0]);
+      managerId = handle.id;
+    }
+    await paseo.agents.ref(managerId).send("[ORDU-EMRI] " + emir);
+    return { ok: true, managerId, mesaj: mevcut.managerId ? "emir mevcut manager'a iletildi" : "manager yaratildi, emir iletildi" };
+  });
 
   return () => {
     for (const remove of removers) remove();
