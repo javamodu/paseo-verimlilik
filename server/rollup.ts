@@ -24,6 +24,9 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
   let tur = 0, kabul = 0, ret = 0, karisiklik = 0, loop = 0, fg = 0, pitbull = 0;
   let turSnToplam = 0, turSnAdet = 0, cacheAgirlikli = 0, cacheAgirlik = 0;
   let altAjanTur = 0;
+  // K-0032 (v0.19): LOC + rework olcumleri
+  let toplamLocDelta = 0, locAdet = 0, toplamEdit = 0;
+  const dosyaTurlari = new Map<string, number[]>();
   for (const satir of readFileSync(tel, "utf8").split(/\r?\n/)) {
     if (!satir.trim()) continue;
     try {
@@ -37,6 +40,16 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
         if (r.loopDurtme) loop++;
         if (r.finishGateDurtme) fg++;
         if (typeof r.turSn === "number") { turSnToplam += r.turSn; turSnAdet++; }
+        if (typeof r.locDelta === "number") { toplamLocDelta += r.locDelta; locAdet++; }
+        if (Array.isArray(r.editDosyalari)) {
+          for (const d of r.editDosyalari) {
+            if (typeof d !== "string") continue;
+            toplamEdit++;
+            const liste = dosyaTurlari.get(d) ?? [];
+            liste.push(tarih.getTime());
+            dosyaTurlari.set(d, liste);
+          }
+        }
         if (typeof r.detay === "string") {
           const m = r.detay.match(/cacheHitPct=([\d.]+)/);
           const inn = r.detay.match(/in=(\d+)/);
@@ -64,6 +77,20 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
   const kabulOrani = kabulToplam > 0 ? Math.round((kabul / kabulToplam) * 1000) / 10 : null;
   const ortTurSn = turSnAdet > 0 ? Math.round(turSnToplam / turSnAdet) : null;
   const ortCache = cacheAgirlik > 0 ? Math.round((cacheAgirlikli / cacheAgirlik) * 10) / 10 : null;
+  // K-0032: ayni dosya 24 saat icinde birden fazla turda editlendiyse rework sayilir.
+  let reworkEdit = 0;
+  for (const zamanlar of dosyaTurlari.values()) {
+    let rework = false;
+    for (let i = 0; i < zamanlar.length && !rework; i++) {
+      for (let j = i + 1; j < zamanlar.length; j++) {
+        if (Math.abs(zamanlar[i] - zamanlar[j]) <= 24 * 3600 * 1000) { rework = true; break; }
+      }
+    }
+    if (rework) reworkEdit += zamanlar.length;
+  }
+  const reworkOrani = toplamEdit > 0 ? Math.round((reworkEdit / toplamEdit) * 1000) / 1000 : null;
+  const saatlikLoc = turSnToplam > 0 ? Math.round(toplamLocDelta / (turSnToplam / 3600)) : null;
+  const etkinLoc = locAdet > 0 ? Math.round(toplamLocDelta * (1 - (reworkOrani ?? 0))) : null;
   const oran = kabulOrani !== null ? "%" + Math.round(kabulOrani) + " (" + kabul + "/" + kabulToplam + ")" : "henüz veri yok";
   const oncekiHaftaAd = isoHafta(new Date(simdi.getTime() - 7 * 86400000));
   const kabulKapsam = kabulToplam > 0
@@ -97,12 +124,14 @@ export function haftalikRollup(cwd: string, simdi = new Date()): string | null {
     "- Alt-ajan turları: " + altAjanTur + (altAjanTur === 0 ? " (harness spawn'ları bu sayıma girmez — REHBER §8)" : ""),
     "- Kabul kapsamı: " + kabulKapsam,
     deltaSatir,
+    "- LOC (K-0032): toplam " + (locAdet > 0 ? String(toplamLocDelta) : "\u2014") + " | saatlik " + (saatlikLoc !== null ? String(saatlikLoc) : "\u2014") + " | rework " + (reworkOrani !== null ? "%" + Math.round(reworkOrani * 100) : "\u2014") + " (T: paralel turlerde sisme payi icerir)" + " | etkin " + (etkinLoc !== null ? String(etkinLoc) : "\u2014"),
     "",
   ].join("\n");
   const json = {
     hafta, uretim: simdi.toISOString(), tur, ortTurSn, kabul, ret, kabulOrani,
     loop, finishGate: fg, pitbull, karisiklik, ortCacheHit: ortCache,
     altAjanTur, kabulKayit: kabulToplam, delta: deltaObj,
+    toplamLocDelta, saatlikLoc, reworkOrani, etkinLoc,
   };
   mkdirSync(dir, { recursive: true });
   writeFileSync(hedefDosya, md, "utf8");

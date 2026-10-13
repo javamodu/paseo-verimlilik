@@ -59,4 +59,5 @@ Koddan türetilebilir bilgi hafızaya GİRMEZ (çift-doğru-kaynak riski).
 - EK-2 (§7 watchdog protokolü): heartbeat dürtmesi geldiğinde — asla kullanıcı yerine onay verme; 2 satır durum raporu; aynı konuda 2. ardışık dürtmede dur.
 - EK-3 (§8 subagent standardı): delegasyon yaparken — brief 4 öğe şart (hedef · çıktı formatı · araç/kaynak · görev sınırı); paralel yazıcı tavanı 3; commit/push tek elden.
 - EK-4 (§9 onboarding checklist): yeni projede ilk tur — SSOT oku, git log+status, handoff echo, CODEMAP taze, DERSLER aç, test baseline, ilk damga.
+- EK-5 (sure ekonomisi, K3): kit kaynak duvar saati — bos ajan/onay blokaji/seri mini-tur yasak; token comert, zaman cimri; kalite frenleri (exit-0, testsiz merge yok) pazarliksiz.
 `;

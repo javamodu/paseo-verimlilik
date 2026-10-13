@@ -72,3 +72,27 @@ export async function briefKontrol(
   );
   return true;
 }
+
+// K-0032 (v0.19): firtina modu brief paket fabrikasi — gelen-kutu maddesinden 4-ogeli doldurulabilir taslak.
+export interface GelenKutuMadde {
+  id: string;
+  baslik: string;
+  dosyaRef: string;
+  oneri: string;
+}
+
+export interface BriefTaslak {
+  hedef: string;
+  ciktiFormati: string;
+  aracKaynak: string;
+  gorevSiniri: string;
+}
+
+export function briefTaslakUret(madde: GelenKutuMadde): BriefTaslak {
+  return {
+    hedef: madde.id + ": " + madde.baslik + " — " + madde.oneri,
+    ciktiFormati: "<doldur: beklenen cikti — degisen dosya listesi + calistirilan komutlar + exit kodlari + 3 satir ozet>",
+    aracKaynak: "Baslangic: " + madde.dosyaRef + " — <doldur: gerekli ek arac/kaynak ve kisitlar>",
+    gorevSiniri: "<doldur: ne YAPMAMALI — dokunulmayacak dosyalar ve yasak islemler>",
+  };
+}

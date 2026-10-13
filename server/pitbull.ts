@@ -1,6 +1,7 @@
 import type { PluginHookAgent, PluginHookContext } from "@getpaseo/plugin/server";
 import { telemetriYaz } from "./telemetry";
-import { ayarOku } from "./ayar";
+import { ayarOku, VARSAYILAN_AYAR, type VerimlilikAyar } from "./ayar";
+import { modCoz } from "./modlar";
 
 const TARAMA_MS = 60_000;
 const YAZICI_STALL_ESIK_MS = 15 * 60_000;
@@ -9,6 +10,13 @@ const DURTME_COOLDOWN_MS = 10 * 60_000;
 const MAKS_ARDISIK_STALL = 3;
 const MAKS_OTURUM_DURTME = 5;
 const BAYAT_TUR_MS = 24 * 60 * 60_000;
+const FIRTINA_STALL_ESIK_MS = 8 * 60_000;
+
+// K-0032 (v0.19): firtina modunda agresif takilma tespiti (8dk); diger modlarda ayar degerleri aynen korunur.
+export function takilmaEsigiMs(modAd: string | null | undefined, yaziciMi = true, ayar: VerimlilikAyar = VARSAYILAN_AYAR): number {
+  if (modAd === "firtina") return FIRTINA_STALL_ESIK_MS;
+  return (yaziciMi ? ayar.pitbullYaziciDk : ayar.pitbullOkuyucuDk) * 60_000;
+}
 
 interface PitbullState {
   turBaslangic: number | null;
@@ -68,7 +76,8 @@ export function pitbullTara(
     const stallSuresi = simdi - s.turBaslangic;
     const yaziciModu = s.sonTurEditliydi;
     const ayar = ayarOku(agent.cwd);
-    const esik = (yaziciModu ? ayar.pitbullYaziciDk : ayar.pitbullOkuyucuDk) * 60_000;
+    const modAd = (modCoz(agent.cwd, agent.provider, null)?.ad ?? null) as string | null;
+    const esik = takilmaEsigiMs(modAd, yaziciModu, ayar);
     if (stallSuresi < esik) continue;
     if (simdi - s.sonDurtme < DURTME_COOLDOWN_MS) continue;
     if (s.ardisikStall >= MAKS_ARDISIK_STALL) {

@@ -119,7 +119,7 @@ assert(izinKarari("git stash drop") === null, "git stash drop kullaniciya");
 assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (yanlis-pozitif yok)");
 
   const pbTmp = fspM.mkdtempSync(osM.tmpdir() + "/pb-");
-  const aj = { id: "pb1", cwd: pbTmp, provider: "codex" } as never;
+  const aj = { id: "pb1", cwd: pbTmp, provider: "qoder" } as never; // R3-01: codex provider artik null-modelde firtina (8dk) — varsayilan esik testi eslesmesiz provider kullanir
   const harita = new Map<string, never>([["pb1", aj]]);
   let giden = 0;
   const gonder = async () => { giden++; };
@@ -584,11 +584,14 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
   {
     const { modCoz, aktifModYaz, aktifModOku, modAyarla: ma2, contextRotOrani, rotDurtmeliMi, MODLAR } = await import("../server/modlar");
     const mTmp = fsp.mkdtempSync(os.tmpdir() + "/mod11-");
-    // eslesme: kimi -> atolye
+    // eslesme: kimi -> firtina (K-0032)
     const m1 = modCoz(mTmp, "codex", "kimi-K3-ultra");
-    assert(m1?.ad === "atolye", "kimi eslesmesi atolye: " + m1?.ad);
+    assert(m1?.ad === "firtina", "kimi eslesmesi firtina: " + m1?.ad);
     // eslesme yok -> null
     assert(modCoz(mTmp, "qoder", "qwen3.8") === null, "eslesme yoksa null");
+// R3-01: hook'larda model null — provider-seviye firtina varsayilani (ikinci emre kadar)
+assert(modCoz(mTmp, "codex", null)?.ad === "firtina", "null model: provider-seviye firtina: " + modCoz(mTmp, "codex", null)?.ad);
+assert(modCoz(mTmp, "codex", undefined)?.ad === "firtina", "undefined model: provider-seviye firtina");
     // aktif override eslemeyi ezer
     aktifModYaz(mTmp, "cerrah");
     assert(modCoz(mTmp, "codex", "kimi-K3")?.ad === "cerrah", "aktif mod eslemeyi ezer");
@@ -605,7 +608,7 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
     assert(ma.ok, "modAyarla ok: " + ma.mesaj);
     assert(modCoz(mTmp, "qoder", "qwen3.8-flash")?.ad === "matbaa", "ayar.json eslesmesi calisir (aktif matbaa ile ayni)");
     aktifModYaz(mTmp, null);
-    assert(modCoz(mTmp, "codex", "kimi")?.ad === "atolye", "sifirlama sonrasi varsayilan eslesme korunur");
+    assert(modCoz(mTmp, "codex", "kimi")?.ad === "firtina", "sifirlama sonrasi varsayilan eslesme korunur (firtina, K-0032)");
     assert(modCoz(mTmp, "qoder", "qwen3.8-flash")?.ad === "matbaa", "sifirlama sonrasi ayar eslesmesi korunur");
     // kotu regex patlamaz (ayri tmp — ayar.json ezmeyi testten izole et)
     const rTmp = fsp.mkdtempSync(os.tmpdir() + "/modre-");
@@ -624,6 +627,7 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
     assert(rotDurtmeliMi("rot-test", 100000 + 31 * 60 * 1000) === true, "cooldown sonrasi tekrar durtur");
     // mod tanimlari butunlugu
     assert(MODLAR.atolye.paralellik === 6 && MODLAR.matbaa.thinking === "high" && MODLAR.cerrah.thinking === "low", "mod tanimlari K-0018'e uygun");
+    assert(MODLAR.firtina.thinking === "high" && MODLAR.firtina.paralellik === 6 && MODLAR.firtina.sistemEki.includes("FIRTINA"), "firtina tanimi K-0032'ye uygun");
     fsp.rmSync(mTmp, { recursive: true, force: true });
   }
   // v0.11: telemetri mod alani + ozet modlar sayaci
@@ -847,6 +851,86 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
     const o6 = to6(m6);
     assert(o6.altAjan === 1 && o6.tur === 2, "A6-1: ozet altAjan sayar: " + o6.altAjan);
     fspM.rmSync(m6, { recursive: true, force: true });
+  }
+
+  // v0.19 (K-0032): LOC telemetrisi - null-guard + editDosyalari
+  {
+    const { turBaslat: tb7, turKaydet: tk7, telemetriDosyasi: td7 } = await import("../server/telemetry");
+    const gTmp = fspM.mkdtempSync(osM.tmpdir() + "/loc-");
+    // git'siz/repo'suz ortam: turBaslat + turKaydet exception firlatmaz, locDelta null
+    tb7("loc-1", gTmp);
+    tk7({ agent: { id: "loc-1", cwd: gTmp, provider: "codex" }, turnId: "t", outcome: { kind: "completed" }, timeline: [], usage: null, model: null, mod: null, loopDurtme: false, finishGateDurtme: false } as never);
+    const satir7 = JSON.parse(fspM.readFileSync(td7(gTmp), "utf8").trim().split("\n").pop()!);
+    assert(satir7.locDelta === null, "git'siz ortamda locDelta null: " + JSON.stringify(satir7.locDelta));
+    tk7({ agent: { id: "loc-2", cwd: gTmp, provider: "codex" }, turnId: "t", outcome: { kind: "completed" }, timeline: [], usage: null, model: null, mod: null, loopDurtme: false, finishGateDurtme: false } as never);
+    const satir7b = JSON.parse(fspM.readFileSync(td7(gTmp), "utf8").trim().split("\n").pop()!);
+    assert(satir7b.locDelta === null, "turBaslat'siz turKaydet locDelta null");
+    const zamanli = [tc("edit", "edit", { filePath: "a.ts" }), tc("edit", "edit", { filePath: "a.ts" }), tc("edit", "write", { filePath: "b.ts" }), tc("exec", "shell", { command: "echo x > c.txt", exitCode: 0 })];
+    tb7("loc-3", gTmp);
+    tk7({ agent: { id: "loc-3", cwd: gTmp, provider: "codex" }, turnId: "t", outcome: { kind: "completed" }, timeline: zamanli, usage: null, model: null, mod: null, loopDurtme: false, finishGateDurtme: false } as never);
+    const satir7c = JSON.parse(fspM.readFileSync(td7(gTmp), "utf8").trim().split("\n").pop()!);
+    assert(Array.isArray(satir7c.editDosyalari) && satir7c.editDosyalari.join(",") === "a.ts,b.ts", "editDosyalari benzersiz: " + JSON.stringify(satir7c.editDosyalari));
+    fspM.rmSync(gTmp, { recursive: true, force: true });
+  }
+  // v0.19 (K-0032): rollup LOC alanlari - saatlikLoc sifir-guard + reworkOrani
+  {
+    const { haftalikRollup: hr7, isoHafta: ih7 } = await import("../server/rollup");
+    const rTmp = fspM.mkdtempSync(osM.tmpdir() + "/rol-");
+    fspM.mkdirSync(rTmp + "/.verimlilik", { recursive: true });
+    const simdi7 = new Date();
+    const t0 = simdi7.getTime();
+    const kayitlar = [
+      { ts: new Date(t0 - 2 * 3600e3).toISOString(), tip: "tur", locDelta: 100, editDosyalari: ["a.ts"] },
+      { ts: new Date(t0 - 1 * 3600e3).toISOString(), tip: "tur", locDelta: 50, editDosyalari: ["a.ts", "b.ts"] },
+      { ts: simdi7.toISOString(), tip: "tur", locDelta: 30, turSn: 3600, editDosyalari: ["c.ts"] },
+    ];
+    fspM.writeFileSync(rTmp + "/.verimlilik/telemetri.jsonl", kayitlar.map((k) => JSON.stringify(k)).join("\n") + "\n");
+    const yol7 = hr7(rTmp, simdi7);
+    assert(yol7 !== null, "LOC kayitli rollup uretildi");
+    const j7 = JSON.parse(fspM.readFileSync(rTmp + "/raporlar/telemetri-haftalik/" + ih7(simdi7) + ".json", "utf8"));
+    assert(j7.toplamLocDelta === 180, "toplamLocDelta: " + j7.toplamLocDelta);
+    assert(j7.saatlikLoc === 180, "saatlikLoc = 180 / 1saat: " + j7.saatlikLoc);
+    assert(j7.reworkOrani === 0.5, "reworkOrani = 2/4: " + j7.reworkOrani);
+    assert(j7.etkinLoc === 90, "etkinLoc = 180 * 0.5: " + j7.etkinLoc);
+    assert(fspM.readFileSync(yol7!, "utf8").includes("rework"), "md rework satiri icerir");
+    const rTmp2 = fspM.mkdtempSync(osM.tmpdir() + "/rol2-");
+    fspM.mkdirSync(rTmp2 + "/.verimlilik", { recursive: true });
+    fspM.writeFileSync(rTmp2 + "/.verimlilik/telemetri.jsonl", JSON.stringify({ ts: simdi7.toISOString(), tip: "tur", locDelta: 10 }) + "\n");
+    const yol7b = hr7(rTmp2, simdi7);
+    const j7b = JSON.parse(fspM.readFileSync(rTmp2 + "/raporlar/telemetri-haftalik/" + ih7(simdi7) + ".json", "utf8"));
+    assert(yol7b !== null && j7b.saatlikLoc === null, "turSn yoksa saatlikLoc null (sifira bolunme yok)");
+    assert(j7b.reworkOrani === null && j7b.etkinLoc === 10, "editsiz: reworkOrani null, etkinLoc=toplamLocDelta");
+    fspM.rmSync(rTmp, { recursive: true, force: true });
+    fspM.rmSync(rTmp2, { recursive: true, force: true });
+  }
+
+  // v0.19 (K-0032): firtina modu uc davranisi
+  {
+    const { takilmaEsigiMs } = await import("../server/pitbull");
+    assert(takilmaEsigiMs("firtina") === 8 * 60_000, "K-0032: firtina takilma esigi 8dk");
+    assert(takilmaEsigiMs("atolye") === 15 * 60_000, "K-0032: firtina disi yazici esigi korunur (15dk)");
+    assert(takilmaEsigiMs(null) === 15 * 60_000, "K-0032: modsuz varsayilan yazici esigi (15dk)");
+    assert(takilmaEsigiMs("atolye", false) === 20 * 60_000, "K-0032: firtina disi okuyucu esigi korunur (20dk)");
+
+    const { briefTaslakUret } = await import("../server/brief");
+    const taslak = briefTaslakUret({ id: "F-1", baslik: "Test baslik", dosyaRef: "server/x.ts:10", oneri: "Bunu duzelt" });
+    assert(taslak.hedef.includes("F-1") && taslak.hedef.includes("Test baslik") && taslak.hedef.includes("Bunu duzelt"), "K-0032: hedef id+baslik+oneri icerir");
+    assert(taslak.ciktiFormati.length > 0, "K-0032: ciktiFormati dolu");
+    assert(taslak.aracKaynak.includes("server/x.ts:10"), "K-0032: aracKaynak dosyaRef icerir");
+    assert(taslak.gorevSiniri.length > 0, "K-0032: gorevSiniri dolu");
+
+    const { k3Satiri } = await import("../server/enjekte");
+    assert(k3Satiri("D:/", "atolye") === null, "K-0032: firtina disi modda k3 satiri yok");
+    const k3Tmp = fspM.mkdtempSync(osM.tmpdir() + "/k3-");
+    assert(k3Satiri(k3Tmp, "firtina") === "K3 bitis tarihi ayarlanmamis (.verimlilik/ayar.json k3Bitis)", "K-0032: k3Bitis yoksa uyari satiri");
+    fspM.mkdirSync(k3Tmp + "/.verimlilik", { recursive: true });
+    fspM.writeFileSync(k3Tmp + "/.verimlilik/ayar.json", JSON.stringify({ k3Bitis: "2026-10-15T12:00:00.000Z" }));
+    const k3Simdi = Date.parse("2026-10-13T00:00:00.000Z");
+    const k3Satir = k3Satiri(k3Tmp, "firtina", k3Simdi);
+    assert(k3Satir === "K3 kalan sure: 2 gun 12 saat (bitis: 2026-10-15T12:00:00.000Z)", "K-0032: kalan sure dogru: " + k3Satir);
+    fspM.writeFileSync(k3Tmp + "/.verimlilik/ayar.json", JSON.stringify({ k3Bitis: "bozuk-tarih" }));
+    assert(k3Satiri(k3Tmp, "firtina", k3Simdi) === null, "K-0032: bozuk tarihte satir sessizce atlanir");
+    fspM.rmSync(k3Tmp, { recursive: true, force: true });
   }
 
   console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");

@@ -3,7 +3,7 @@ import { join, dirname } from "node:path";
 import { katmanKokuBul } from "./sozlesme";
 import type { AgentUsage } from "@getpaseo/protocol/agent-types";
 
-export type ModAd = "atolye" | "matbaa" | "cerrah" | "serbest";
+export type ModAd = "atolye" | "firtina" | "matbaa" | "cerrah" | "serbest";
 
 export interface Mod {
   ad: ModAd;
@@ -19,6 +19,12 @@ export const MODLAR: Record<ModAd, Mod> = {
     thinking: "ultra",
     paralellik: 6,
     sistemEki: "Mod: ATOLYE (sure-bazli limitsiz provider) — ultra thinking, 6'ya kadar paralel ajan, comert baglam oku. Baglam penceresi >%80 dolarsa yeni turda tazele (Context Rot freni). Tamamlanan is icin cift-ajan dogrulama oner (orkestrasyon kullanicida).",
+  },
+  firtina: {
+    ad: "firtina",
+    thinking: "high",
+    paralellik: 6,
+    sistemEki: "Mod: FIRTINA (Kimi-K3 sure-bazli lisans, ikinci emre kadar aktif) — kit kaynak duvar saati: bos ajan yasak, 6 slot dolu tut; token comert, zaman cimri. Onay bekleyen is seni bloklamaz: bagimsiz pakete gec, onaylari tek mesajda toplu sun. Kalite frenleri pazarliksiz: finish-gate exit-0, testsiz merge yok, kabul+rework carpani.",
   },
   matbaa: {
     ad: "matbaa",
@@ -42,9 +48,12 @@ export const MODLAR: Record<ModAd, Mod> = {
 
 export interface ModEslesme { provider: string; modelDeseni: string; mod: ModAd }
 
-// Gomulu varsayilanlar (K-0018 ornekleri): kimi -> atolye, GLM/deepseek -> cerrah.
+// Gomulu varsayilanlar (K-0018 ornekleri): kimi -> firtina (K-0032), GLM/deepseek -> cerrah.
 export const VARSAYILAN_ESLESME: ModEslesme[] = [
-  { provider: "codex", modelDeseni: "kimi", mod: "atolye" },
+// K-0032: ikinci emre kadar firtina; geri alma = bu satiri atolye'ye cevir
+  { provider: "codex", modelDeseni: "kimi", mod: "firtina" },
+  // K-0032 (R3-01): hook'larda model alani tasinmiyor; null-model icin provider-seviye varsayilan. Ikinci emirle bu satir da kaldirilir.
+  { provider: "codex", modelDeseni: "", mod: "firtina" },
   { provider: "codefast-glm", modelDeseni: "", mod: "cerrah" },
   { provider: "cf-opensource", modelDeseni: "glm|deepseek", mod: "cerrah" },
 ];

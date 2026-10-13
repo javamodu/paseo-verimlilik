@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { mkdirSync, appendFileSync, readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { PluginHookAgent, PluginTurnOutcome } from "@getpaseo/plugin/server";
@@ -37,14 +38,39 @@ export interface TelemetriKayit {
   kuralToplam?: number;
   butceBytes?: number;
   detay?: string;
+  locDelta?: number | null;
+  editDosyalari?: string[];
 }
 
 const turSayaclari = new Map<string, number>();
 const turBaslangiclari = new Map<string, number>();
+const locBaslangiclari = new Map<string, number | null>();
+
+// K-0032 (v0.19): tur baslangicinda working-tree numstat toplami (ekleme+silme).
+// Git yoksa / repo degilse null - asla exception firlatmaz.
+function locSnapshot(cwd: string): number | null {
+  try {
+    const cikti = execFileSync("git", ["diff", "--numstat", "HEAD"], {
+      cwd,
+      timeout: 2000, // K-0032 (R3-02): event-loop blokajini sinirla
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    let toplam = 0;
+    for (const satir of cikti.split(/\r?\n/)) {
+      const m = satir.match(/^(\d+)\s+(\d+)\s+/);
+      if (m) toplam += parseInt(m[1], 10) + parseInt(m[2], 10);
+    }
+    return toplam;
+  } catch {
+    return null;
+  }
+}
 
 // K-0025 (A2-1): agent.closed sonrasi bellek sizintisini onler.
 export function ajanTemizle(agentId: string): void {
   turSayaclari.delete(agentId);
+  locBaslangiclari.delete(agentId);
   // K-0029 (A2-6): acik turu kapanmadan kapanan ajan aktifTur'u sisirmesin.
   if (turBaslangiclari.delete(agentId)) {
     aktifTur = Math.max(0, aktifTur - 1);
@@ -79,6 +105,9 @@ export function telemetriYaz(cwd: string, kayit: TelemetriKayit): void {
 export function turBaslat(agentId: string, cwd?: string): number {
   turBaslangiclari.set(agentId, Date.now());
   aktifTur++;
+  if (cwd) {
+    locBaslangiclari.set(agentId, locSnapshot(cwd));
+  }
   if (cwd && aktifTur > PARALEL_TAVAN) {
     telemetriYaz(cwd, {
       ts: new Date().toISOString(),
@@ -107,6 +136,10 @@ export function turKaydet(input: {
   const ozetler = turCagrilari(input.timeline);
   const shell = ozetler.filter((o) => o.command !== undefined);
   const edits = editCagrilari(ozetler);
+  const dosyaSet = new Set<string>();
+  for (const e of edits) {
+    if (e.filePath) dosyaSet.add(e.filePath);
+  }
   const usage = input.usage;
   const detayParca: string[] = [];
   if (usage?.inputTokens) {
@@ -118,6 +151,12 @@ export function turKaydet(input: {
     if (usage.outputTokens) detayParca.push(`out=${usage.outputTokens}`);
   }
   aktifTur = Math.max(0, aktifTur - 1);
+  // K-0032 (v0.19): baslangic snapshot'i ile fark; git'siz ortamda null.
+  const locBaslangic = locBaslangiclari.get(input.agent.id);
+  locBaslangiclari.delete(input.agent.id);
+  const locDelta = locBaslangic === undefined || locBaslangic === null
+    ? null
+    : (() => { const simdi = locSnapshot(input.agent.cwd); return simdi === null ? null : simdi - locBaslangic; })();
   telemetriYaz(input.agent.cwd, {
     ts: new Date().toISOString(),
     tip: "tur",
@@ -142,6 +181,8 @@ export function turKaydet(input: {
     failedCalls: ozetler.filter((o) => o.status === "failed").length,
     loopDurtme: input.loopDurtme || undefined,
     finishGateDurtme: input.finishGateDurtme || undefined,
+    locDelta,
+    editDosyalari: dosyaSet.size > 0 ? [...dosyaSet] : undefined,
     detay: detayParca.length > 0 ? detayParca.join(" ") : undefined,
   });
   // K-0029 (A2-6): tur kapandi — baslangic kaydi temizlenir; kalan kayit = acik tur.
