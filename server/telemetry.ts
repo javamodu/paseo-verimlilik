@@ -166,8 +166,15 @@ export function halRefTara(metin: string, cwd: string): { toplam: number; kirik:
   while ((m = HAL_DESEN.exec(metin)) !== null && toplam < 10) {
     toplam++;
     try {
-      const p = join(cwd, m[1]);
-      if (!existsSync(p)) { kirik++; continue; }
+      // v0.22 fix: once cwd, sonra katman koku — alt-dizin cwd'sinde calisan ajanin kok-goreli referanslari
+      // yanlis-pozitif kirilmiyordu (R: canli deney, paseo-plugin cwd'sinde %100 kirik). Bilinen sinir:
+      // ciplak cross-repo referanslar (baska reponun dosyasi, repo adi olmadan) hala kirik sayilir.
+      let p = join(cwd, m[1]);
+      if (!existsSync(p)) {
+        const kokYol = join(katmanKokuBul(cwd), m[1]);
+        if (!existsSync(kokYol)) { kirik++; continue; }
+        p = kokYol;
+      }
       const satirSayisi = readFileSync(p, "utf8").split(/\r?\n/).length;
       if (parseInt(m[2], 10) > satirSayisi) kirik++;
     } catch { kirik++; }

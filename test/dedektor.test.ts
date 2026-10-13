@@ -1039,6 +1039,21 @@ assert(modCoz(mTmp, "codex", undefined)?.ad === "firtina", "undefined model: pro
       assert(halSonuc.toplam === 3 && halSonuc.kirik === 2, "v0.21: halRefTara 3 toplam 2 kirik: " + JSON.stringify(halSonuc));
       fspM.rmSync(hTmp, { recursive: true, force: true });
     }
+    // v0.22: halRefTara katman-koku fallback (alt-dizin cwd yanlis-pozitif duzeltmesi)
+    {
+      const { halRefTara } = await import("../server/telemetry");
+      const hKok = fspM.mkdtempSync(osM.tmpdir() + "/halkok-");
+      fspM.writeFileSync(hKok + "/AGENTS.md", "- kural");
+      fspM.writeFileSync(hKok + "/a.ts", "s1\ns2\ns3\n");
+      fspM.mkdirSync(hKok + "/alt", { recursive: true });
+      const r22 = halRefTara("a.ts:2 gecerli", hKok + "/alt");
+      assert(r22.toplam === 1 && r22.kirik === 0, "v0.22: alt-dizin cwd kok-goreli ref kirilmaz: " + JSON.stringify(r22));
+      const r22b = halRefTara("yok.ts:9", hKok + "/alt");
+      assert(r22b.toplam === 1 && r22b.kirik === 1, "v0.22: varolmayan dosya hala kirik: " + JSON.stringify(r22b));
+      const r22c = halRefTara("a.ts:99", hKok + "/alt");
+      assert(r22c.toplam === 1 && r22c.kirik === 1, "v0.22: satir asimi hala kirik (kok fallback sonrasi): " + JSON.stringify(r22c));
+      fspM.rmSync(hKok, { recursive: true, force: true });
+    }
     tb7("v21-1", gTmp);
     tk7({ agent: { id: "v21-1", cwd: gTmp, provider: "codex" }, turnId: "t", outcome: { kind: "completed" }, timeline: [tc("exec", "shell", { command: "npm test", exitCode: 1 })], usage: { outputTokens: 100 }, model: null, mod: null, loopDurtme: false, finishGateDurtme: false } as never);
     const satirV21 = JSON.parse(fspM.readFileSync(td7(gTmp), "utf8").trim().split("\n").pop()!);
