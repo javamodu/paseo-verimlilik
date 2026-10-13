@@ -1,0 +1,15 @@
+{
+    "etiket":  "v0.22-kilit",
+    "tarih":  "2026-10-14",
+    "commit":  "df9101c",
+    "doctor":  {
+                   "ok":  1,
+                   "eksik":  0,
+                   "sari":  0,
+                   "kaynak":  "npm test+typecheck"
+               },
+    "hedefler":  null,
+    "eksenPuanlari":  null,
+    "ekOzet":  "345+ assertion yesil",
+    "not":  "aktifSn metrigi (bekleme-haric calisma suresi) + D2-07/08, BK-01, D2-15, R3-05/07/08/09 kapanislari"
+}
