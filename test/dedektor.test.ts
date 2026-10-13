@@ -838,6 +838,17 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
     fspM.rmSync(kTmp, { recursive: true, force: true });
   }
 
+  // v0.18 (K-0030, A6-1): telemetriOzet altAjan sayaci
+  {
+    const { turKaydet: tk6, telemetriOzetle: to6 } = await import("../server/telemetry");
+    const m6 = fspM.mkdtempSync(osM.tmpdir() + "/a61-");
+    tk6({ agent: { id: "p1", cwd: m6, provider: "codex", parentAgentId: "ebeveyn" }, turnId: "t1", outcome: { kind: "completed" }, timeline: [], usage: null, model: null, mod: null, loopDurtme: false, finishGateDurtme: false } as never);
+    tk6({ agent: { id: "p2", cwd: m6, provider: "codex" }, turnId: "t2", outcome: { kind: "completed" }, timeline: [], usage: null, model: null, mod: null, loopDurtme: false, finishGateDurtme: false } as never);
+    const o6 = to6(m6);
+    assert(o6.altAjan === 1 && o6.tur === 2, "A6-1: ozet altAjan sayar: " + o6.altAjan);
+    fspM.rmSync(m6, { recursive: true, force: true });
+  }
+
   console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
   process.exit(hata === 0 ? 0 : 1);
 })();

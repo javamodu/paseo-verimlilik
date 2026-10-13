@@ -2,6 +2,7 @@ import type { PluginClientContext } from "@getpaseo/plugin/client";
 import { sozlesmeEnjekte, modAyarla } from "./shared/contracts";
 import { TelemetriEkrani } from "./client/telemetri";
 import { DegerlendirmeEkrani } from "./client/degerlendirme";
+import { ModEkrani } from "./client/mod";
 
 export default function contribute(client: PluginClientContext) {
   client.addCommandCenterItem({
@@ -39,6 +40,7 @@ export default function contribute(client: PluginClientContext) {
   });
 
   client.addScreen({ id: "degerlendirme", title: "Öz-değerlendirme", Component: DegerlendirmeEkrani });
+  client.addScreen({ id: "mod", title: "Provider modu", Component: ModEkrani });
   client.addCommandCenterItem({
     id: "degerlendirme-son",
     title: "Son öz-değerlendirme raporunu aç",
@@ -58,7 +60,8 @@ export default function contribute(client: PluginClientContext) {
     async onSubmit({ args, workspace, rpc, openScreen }) {
       const parcalar = args.trim().split(/\s+/).filter(Boolean);
       if (parcalar.length === 0) {
-        openScreen({ screenId: "telemetri", params: { cwd: workspace.directory } });
+        // K-0030 (A6-2): argsiz /mod mod durumunu gosterir (telemetri degil).
+        openScreen({ screenId: "mod", params: { cwd: workspace.directory } });
         return;
       }
       const modAd = parcalar[0].toLowerCase();

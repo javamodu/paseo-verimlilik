@@ -34,6 +34,7 @@ export const telemetriOzet = defineRpc({
     modeller: z.record(z.string(), z.number()),
     maliyetUsd: z.number(),
     modlar: z.record(z.string(), z.number()),
+    altAjan: z.number(),
   }),
 });
 

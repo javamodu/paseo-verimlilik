@@ -197,10 +197,11 @@ export function telemetriOzetle(cwd: string): {
   kabul: number; ret: number; kabulOrani: number | null; anlasilmazlik: number;
   inTok: number; outTok: number; cacheTok: number; ortTurSn: number | null;
   modeller: Record<string, number>; maliyetUsd: number; modlar: Record<string, number>;
+  altAjan: number;
 } {
   const dosya = telemetriDosyasi(cwd);
   let tur = 0, loopDurtme = 0, finishGateDurtme = 0, kabul = 0, ret = 0, anlasilmazlik = 0;
-  let inTok = 0, outTok = 0, cacheTok = 0, turSnToplam = 0, turSnAdet = 0, maliyetToplam = 0;
+  let inTok = 0, outTok = 0, cacheTok = 0, turSnToplam = 0, turSnAdet = 0, maliyetToplam = 0, altAjan = 0;
   const modeller: Record<string, number> = {};
   const modlar: Record<string, number> = {};
   if (existsSync(dosya)) {
@@ -217,6 +218,7 @@ export function telemetriOzetle(cwd: string): {
           if (typeof kayit.turSn === "number") { turSnToplam += kayit.turSn; turSnAdet++; }
           if (kayit.model) modeller[kayit.model] = (modeller[kayit.model] ?? 0) + 1;
           if (kayit.mod) modlar[kayit.mod] = (modlar[kayit.mod] ?? 0) + 1;
+          if (kayit.altAjan) altAjan++;
         }
         if (kayit.loopDurtme) loopDurtme++;
         if (kayit.finishGateDurtme) finishGateDurtme++;
@@ -231,7 +233,7 @@ export function telemetriOzetle(cwd: string): {
   }
   const toplam = kabul + ret;
   return {
-    dosya, tur, loopDurtme, finishGateDurtme, kabul, ret,
+    dosya, tur, loopDurtme, finishGateDurtme, kabul, ret, altAjan,
     kabulOrani: toplam > 0 ? Math.round((kabul / toplam) * 1000) / 10 : null,
     anlasilmazlik,
     inTok, outTok, cacheTok,
