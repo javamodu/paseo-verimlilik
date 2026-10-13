@@ -526,7 +526,9 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
   const okur = ROLLER.tester, raporcu = ROLLER.reviewer, coderR = ROLLER.coder;
   assert(rolIzinKarari(mkReq({ command: "git status" }), okur) === "allow", "okur: git status allow");
   assert(rolIzinKarari(mkReq({ command: "npm test" }), okur) === "allow", "okur: npm test allow (kosucu)");
-  assert(rolIzinKarari(mkReq({ command: "npx tsc --noEmit" }), okur) === "allow", "okur: tsc --noEmit allow");
+  assert(rolIzinKarari(mkReq({ command: "npx --no-install tsc --noEmit" }), okur) === "allow", "okur: npx --no-install tsc allow (D2-07)");
+  assert(rolIzinKarari(mkReq({ command: "npx tsc --noEmit" }), okur) === null, "okur: bare npx insan kapisina duser (D2-07)");
+  assert(rolIzinKarari(mkReq({ command: "npx vitest" }), okur) === null, "okur: bare npx vitest insan kapisina duser (D2-07)");
   assert(rolIzinKarari(mkReq({ command: "Set-Content a.txt x" }), okur) === "deny", "okur: Set-Content deny");
   assert(rolIzinKarari(mkReq({ command: "git commit -m x" }), okur) === "deny", "okur: git commit deny");
   assert(rolIzinKarari(mkReq({ filePath: "src/a.ts" }), okur) === "deny", "okur: edit deny");

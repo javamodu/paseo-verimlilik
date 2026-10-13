@@ -49,7 +49,8 @@ export function rolCoz(title: string | null | undefined): Rol | null {
   return ROLLER[ad] ?? null;
 }
 
-const TEST_KOSUCU = /^(npm\s+(run\s+)?(test|typecheck|lint|build)\b|npx\s+(vitest|jest|tsc\s+--noEmit|tsx\s+test)|pnpm\s+(test|typecheck)|pytest\b|go\s+test\b|cargo\s+test\b|dotnet\s+test\b)/i;
+// D2-07: npx yalniz --no-install ile guvenli; bayraksiz npx paket yoksa registry'den kod indirip calistirir, insan kapisina duser.
+const TEST_KOSUCU = /^(npm\s+(run\s+)?(test|typecheck|lint|build)\b|npx\s+--no-install\s+(vitest|jest|tsc\s+--noEmit|tsx\s+test)|pnpm\s+(test|typecheck)|pytest\b|go\s+test\b|cargo\s+test\b|dotnet\s+test\b)/i;
 const YAZMA_KOMUTU = /\b(Set-Content|Out-File|Add-Content|New-Item|mkdir|copy|move|del|Remove-Item)\b|>+\s*[^|]|\bwriteFileSync\b|\bgit\s+(add|commit|push|tag|restore|checkout)\b/i;
 const RAPOR_SEGMENT = /(^|\/)raporlar(\/|$)/i;
 
