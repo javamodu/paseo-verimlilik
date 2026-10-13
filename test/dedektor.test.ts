@@ -719,6 +719,24 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
     fspM.rmSync(dNormal, { recursive: true, force: true });
   }
 
+  // v0.15 (K-0027, D2-01..04): rol katmani zincir/ikame guvenligi
+  {
+    const { rolIzinKarari: rik3, ROLLER: R3 } = await import("../server/roller");
+    const { izinKarari: ik3 } = await import("../server/permission");
+    const okur3 = R3.tester, rap3 = R3.reviewer;
+    const mk3 = (command: string) => ({ input: { command } }) as never;
+    assert(rik3(mk3("npm test; Get-Content x"), okur3) === null, "D2-01: kosucu+zincir auto-allow degil");
+    assert(rik3(mk3("npm test && npm run build"), okur3) === null, "D2-01b: kosucu+&& auto-allow degil");
+    assert(rik3(mk3("npm test"), okur3) === "allow", "D2-01 guard: duz kosucu hala allow");
+    assert(rik3(mk3("Set-Content raporlar/x.md ozet; echo b"), rap3) === null, "D2-02: raporcu yazma+zincir insan kapisina");
+    assert(rik3(mk3("echo ozet > raporlar/gun.md"), rap3) === "allow", "D2-02 guard: redirect hedefi raporlar ise allow");
+    assert(rik3(mk3("Set-Content src/x.ts (Get-Content raporlar/ok.md)"), rap3) === "deny", "D2-03: hedef src, substring raporlar -> deny");
+    assert(rik3(mk3("git add raporlar/a.md"), rap3) === "allow", "D2-03 guard: git add raporlar hedefi allow");
+    assert(rik3(mk3("git add -A"), rap3) === "deny", "D2-03b: git add -A raporcu'ya deny");
+    assert(ik3("echo $(whoami)") === null, "D2-04: $() ikamesi zincir sayilir");
+    assert(ik3("echo hello") === "allow", "D2-04 guard: duz echo allow");
+  }
+
   console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
   process.exit(hata === 0 ? 0 : 1);
 })();

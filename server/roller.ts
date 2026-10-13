@@ -1,6 +1,6 @@
 import * as path from "node:path";
 import type { AgentPermissionRequest } from "@getpaseo/protocol/agent-types";
-import { izinKarari, izinYanitla } from "./permission";
+import { izinKarari, izinYanitla, ZINCIR_SERT } from "./permission";
 import type { PluginHookAgent, PluginHookContext } from "@getpaseo/plugin/server";
 
 export type IzinProfili = "tam" | "okur" | "raporcu";
@@ -59,9 +59,23 @@ export function raporYoluGuvenliMi(dosya: string): boolean {
   return RAPOR_SEGMENT.test(n);
 }
 
-function komuttaRaporYoluGuvenliMi(k: string): boolean {
-  const m = k.match(/raporlar[\/\\][^\s"']*/i);
-  return m !== null && raporYoluGuvenliMi(m[0]);
+// K-0027 (D2-03): yazma HEDEFI ayristirilir; substring yetmez. Her hedef raporlar/ altinda olmali, aksi insan kapisina duser.
+const YAZMA_ILK_YOL = /^(?:Set-Content|Out-File|Add-Content|New-Item|mkdir|copy|move|del|Remove-Item)\s+["']?([^\s"']+)/i;
+
+function yazmaHedefleriGuvenliMi(k: string): boolean {
+  const hedefler: string[] = [];
+  const ilk = k.match(YAZMA_ILK_YOL);
+  if (ilk) hedefler.push(ilk[1]);
+  const redir = k.match(/>+\s*["']?([^\s"']+)/);
+  if (redir) hedefler.push(redir[1]);
+  const gitAdd = k.match(/^git\s+add\s+(.+)$/i);
+  if (gitAdd) {
+    for (const tk of gitAdd[1].split(/\s+/)) {
+      if (!tk.startsWith("-")) hedefler.push(tk.replace(/^["']|["']$/g, ""));
+    }
+  }
+  if (hedefler.length === 0) return false;
+  return hedefler.every((h) => raporYoluGuvenliMi(h));
 }
 
 function istekDosyaYolu(request: AgentPermissionRequest): string | null {
@@ -91,11 +105,13 @@ export function rolIzinKarari(request: AgentPermissionRequest, rol: Rol): "allow
   }
   if (komut === null) return null;
   const k = komut.trim();
-  if (TEST_KOSUCU.test(k)) return "allow";
   const taban = izinKarari(k);
   if (taban === "allow") return "allow";
   if (taban === "deny") return "deny";
-  if (rol.profil === "raporcu" && YAZMA_KOMUTU.test(k) && komuttaRaporYoluGuvenliMi(k)) return "allow";
+  // K-0027 (D2-01/02): zincir/ikame iceren komut hicbir rolden auto-allow almaz; insan kapisina duser.
+  if (ZINCIR_SERT.test(k)) return null;
+  if (TEST_KOSUCU.test(k)) return "allow";
+  if (rol.profil === "raporcu" && YAZMA_KOMUTU.test(k) && yazmaHedefleriGuvenliMi(k)) return "allow";
   if (YAZMA_KOMUTU.test(k)) return "deny";
   return null;
 }

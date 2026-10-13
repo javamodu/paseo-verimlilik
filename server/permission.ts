@@ -4,7 +4,9 @@ import { shellCommand } from "./inspect";
 import { telemetriYaz } from "./telemetry";
 
 const TEHLIKE_DESENI = /\b(rm\s+-rf|rm\s+-fr|Remove-Item\b.*-Recurse|push\b.*--force|push\s+-f\b|reset\s+--hard|DROP\s+TABLE|Format-Volume|del\s+\/[sq]|rd\s+\/s|git\s+clean\s+-[a-z]*f[a-z]*|git\s+checkout\s+--|mkfs|shutdown|format\s+[a-z]:)(?=\s|$)/i;
-const ZINCIR_DESENI = /[>|&;`]|&&|\|\|/;
+export const ZINCIR_DESENI = /[>|&;`]|&&|\|\||\$\(/;
+// K-0027 (D2-01/02): rol katmaninda auto-allow engeli; tek basina `>` redirect yazim hedefi dogrulanabilir oldugundan disarida.
+export const ZINCIR_SERT = /[;&|`]|\$\(/;
 // K-0025 (A2-2): rg/find serbest argumanli; yazici/calistirici bayrak tasiyorsa otomatik izin yok, insan kapisina duser.
 const SERBEST_ARGUMANLI = /^(rg|find)\b/i;
 const OKUYUCU_YAZICI_BAYRAK = /(^|\s)(--pre\b|--pre-glob\b|-delete\b|-exec\b|-execdir\b|-ok\b|-okdir\b|-fls\b|-fprint\b|-fprintf\b)/;
