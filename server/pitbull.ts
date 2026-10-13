@@ -19,6 +19,11 @@ interface PitbullState {
 }
 
 const durum = new Map<string, PitbullState>();
+
+// K-0025 (A2-1): agent.closed sonrasi bellek sizintisini onler.
+export function ajanTemizle(agentId: string): void {
+  durum.delete(agentId);
+}
 const PLUGIN_BASLANGIC = Date.now();
 
 function stateAl(agentId: string): PitbullState {

@@ -5,6 +5,9 @@ import { telemetriYaz } from "./telemetry";
 
 const TEHLIKE_DESENI = /\b(rm\s+-rf|rm\s+-fr|Remove-Item\b.*-Recurse|push\b.*--force|push\s+-f\b|reset\s+--hard|DROP\s+TABLE|Format-Volume|del\s+\/[sq]|rd\s+\/s|git\s+clean\s+-[a-z]*f[a-z]*|git\s+checkout\s+--|mkfs|shutdown|format\s+[a-z]:)(?=\s|$)/i;
 const ZINCIR_DESENI = /[>|&;`]|&&|\|\|/;
+// K-0025 (A2-2): rg/find serbest argumanli; yazici/calistirici bayrak tasiyorsa otomatik izin yok, insan kapisina duser.
+const SERBEST_ARGUMANLI = /^(rg|find)\b/i;
+const OKUYUCU_YAZICI_BAYRAK = /(^|\s)(--pre\b|--pre-glob\b|-delete\b|-exec\b|-execdir\b|-ok\b|-okdir\b|-fls\b|-fprint\b|-fprintf\b)/;
 // Salt-okuma beyaz listesi: komut + alt-komut + secenek birlesimi esasi (v0.8a).
 // Okuyucu komutlarda arguman serbest; git/npm'de alt-komut ve bayrak kontrollu.
 const OKUYUCU_TAM = /^(ls|dir|Get-ChildItem|Get-Content|Get-Item|cat|type|rg|grep|find|where|Test-Path|pwd|Get-Location|node\s+--version|npm\s+--version|git\s+--version)\b/i;
@@ -44,6 +47,9 @@ export function izinKarari(komut: string | null): "allow" | "deny" | null {
     return "deny";
   }
   if (ZINCIR_DESENI.test(k)) {
+    return null;
+  }
+  if (SERBEST_ARGUMANLI.test(k) && OKUYUCU_YAZICI_BAYRAK.test(k)) {
     return null;
   }
   if (izinVerilenMi(k)) {

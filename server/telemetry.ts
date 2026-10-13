@@ -41,6 +41,12 @@ export interface TelemetriKayit {
 
 const turSayaclari = new Map<string, number>();
 const turBaslangiclari = new Map<string, number>();
+
+// K-0025 (A2-1): agent.closed sonrasi bellek sizintisini onler.
+export function ajanTemizle(agentId: string): void {
+  turSayaclari.delete(agentId);
+  turBaslangiclari.delete(agentId);
+}
 let aktifTur = 0;
 export const PARALEL_TAVAN = 3;
 

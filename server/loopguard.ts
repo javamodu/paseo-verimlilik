@@ -13,6 +13,11 @@ interface LoopState {
 
 const durum = new Map<string, LoopState>();
 
+// K-0025 (A2-1): agent.closed sonrasi bellek sizintisini onler.
+export function ajanTemizle(agentId: string): void {
+  durum.delete(agentId);
+}
+
 function loopVarMi(hashler: string[]): string | null {
   if (hashler.length >= TEKRAR_ESIGI) {
     const son = hashler.slice(-TEKRAR_ESIGI);

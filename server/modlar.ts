@@ -110,6 +110,11 @@ export function contextRotOrani(usage: AgentUsage | null): number | null {
 
 // Context Rot freni cooldown (ATOLYE): reload'da sifirlanir — kabul edilebilir (tur basina max 1 durtme).
 const rotSonDurtme = new Map<string, number>();
+
+// K-0025 (A2-1): agent.closed sonrasi bellek sizintisini onler.
+export function ajanTemizle(agentId: string): void {
+  rotSonDurtme.delete(agentId);
+}
 const ROT_COOLDOWN_MS = 30 * 60 * 1000;
 export function rotDurtmeliMi(agentId: string, simdi: number): boolean {
   const son = rotSonDurtme.get(agentId);

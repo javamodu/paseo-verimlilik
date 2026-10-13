@@ -1,3 +1,4 @@
+import * as path from "node:path";
 import type { AgentPermissionRequest } from "@getpaseo/protocol/agent-types";
 import { izinKarari, izinYanitla } from "./permission";
 import type { PluginHookAgent, PluginHookContext } from "@getpaseo/plugin/server";
@@ -50,7 +51,18 @@ export function rolCoz(title: string | null | undefined): Rol | null {
 
 const TEST_KOSUCU = /^(npm\s+(run\s+)?(test|typecheck|lint|build)\b|npx\s+(vitest|jest|tsc\s+--noEmit|tsx\s+test)|pnpm\s+(test|typecheck)|pytest\b|go\s+test\b|cargo\s+test\b|dotnet\s+test\b)/i;
 const YAZMA_KOMUTU = /\b(Set-Content|Out-File|Add-Content|New-Item|mkdir|copy|move|del|Remove-Item)\b|>+\s*[^|]|\bwriteFileSync\b|\bgit\s+(add|commit|push|tag|restore|checkout)\b/i;
-const RAPOR_YOLU = /raporlar[\/\\]/i;
+const RAPOR_SEGMENT = /(^|\/)raporlar(\/|$)/i;
+
+// K-0025 (A2-3): once normalize et (.. cozumlenir), sonra raporlar segmenti ara; traversal raporlar disina cikarsa izin yok.
+export function raporYoluGuvenliMi(dosya: string): boolean {
+  const n = path.win32.normalize(dosya).replace(/\\/g, "/");
+  return RAPOR_SEGMENT.test(n);
+}
+
+function komuttaRaporYoluGuvenliMi(k: string): boolean {
+  const m = k.match(/raporlar[\/\\][^\s"']*/i);
+  return m !== null && raporYoluGuvenliMi(m[0]);
+}
 
 function istekDosyaYolu(request: AgentPermissionRequest): string | null {
   const input = (request.input ?? {}) as Record<string, unknown>;
@@ -74,7 +86,7 @@ export function rolIzinKarari(request: AgentPermissionRequest, rol: Rol): "allow
     return komut !== null ? izinKarari(komut) : null;
   }
   if (dosya !== null) {
-    if (rol.profil === "raporcu" && RAPOR_YOLU.test(dosya)) return "allow";
+    if (rol.profil === "raporcu" && raporYoluGuvenliMi(dosya)) return "allow";
     return "deny";
   }
   if (komut === null) return null;
@@ -83,7 +95,7 @@ export function rolIzinKarari(request: AgentPermissionRequest, rol: Rol): "allow
   const taban = izinKarari(k);
   if (taban === "allow") return "allow";
   if (taban === "deny") return "deny";
-  if (rol.profil === "raporcu" && YAZMA_KOMUTU.test(k) && RAPOR_YOLU.test(k)) return "allow";
+  if (rol.profil === "raporcu" && YAZMA_KOMUTU.test(k) && komuttaRaporYoluGuvenliMi(k)) return "allow";
   if (YAZMA_KOMUTU.test(k)) return "deny";
   return null;
 }

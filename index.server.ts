@@ -21,6 +21,7 @@ import { KARISIKLIK_DESENI, RET_DESENI } from "./server/desenler";
 import { sonDegerlendirmeOku } from "./server/degerlendirme";
 import { basarisizOranMesaji } from "./server/kalite";
 import { modCoz, modDurumOku, modAyarla as modAyarlaUygula, contextRotOrani, rotDurtmeliMi } from "./server/modlar";
+import { ajanTemizleHepsi } from "./server/temizlik";
 
 
 interface TurState {
@@ -199,6 +200,8 @@ export default function contribute(server: PluginServerContext) {
     server.on("agent.closed", (event) => {
       aktifAjanlar.delete(event.agent.id);
       aktifTurler.delete(event.agent.id);
+      turDurumu.delete(event.agent.id);
+      ajanTemizleHepsi(event.agent.id);
     }),
   );
 

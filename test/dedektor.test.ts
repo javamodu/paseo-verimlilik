@@ -638,6 +638,39 @@ assert(izinKarari("rg fix src/") === "allow", "okuyucu komutta arguman serbest (
     fsp.rmSync(mmTmp, { recursive: true, force: true });
   }
 
+  // v0.13 (K-0025, A2-2): serbest-argumanli okuyucularda yazici bayraklar insan kapisina duser
+  {
+    const { izinKarari: ik2 } = await import("../server/permission");
+    assert(ik2("find . -name x -delete") === null, "find -delete auto-allow degil");
+    assert(ik2("find . -exec rm {} +") === null, "find -exec auto-allow degil");
+    assert(ik2("rg --pre cat foo") === null, "rg --pre auto-allow degil");
+    assert(ik2("rg foo src") === "allow", "duz rg hala allow");
+    assert(ik2("find . -name '*.ts'") === "allow", "duz find hala allow");
+    assert(ik2("Get-Content a.txt") === "allow", "diger okuyucular etkilenmedi");
+  }
+  // v0.13 (K-0025, A2-3): raporcu rolu traversal yazamaz
+  {
+    const { rolIzinKarari: rik, ROLLER: R2, raporYoluGuvenliMi: ryg } = await import("../server/roller");
+    const rap = R2.reviewer;
+    const req = (filePath: string) => ({ input: { filePath } }) as never;
+    assert(rik(req("raporlar/../STATE_BOARD.md"), rap) === "deny", "traversal raporcu yazimi engellendi");
+    assert(rik(req("raporlar/gelen-kutu/x.md"), rap) === "allow", "duz rapor yolu izinli");
+    assert(rik(req("D:\\proj\\raporlar\\x.md"), rap) === "allow", "mutlak rapor yolu izinli");
+    assert(rik(req("src/raporlars/x.md"), rap) === "deny", "raporlar-benzeri segment izinsiz");
+    assert(ryg("raporlar/..") === false, "kok traversal normalize sonrasi reddedilir");
+  }
+  // v0.13 (K-0025, A2-1): agent.closed tum ajan-state haritalarini temizler
+  {
+    const { pitbullTurBasladi: ptb, _testIcinDurumVer: pdv, ajanTemizle: pTemizle } = await import("../server/pitbull");
+    ptb("kapandi-1");
+    assert(pdv("kapandi-1") !== undefined, "pitbull durumu seed'lendi");
+    pTemizle("kapandi-1");
+    assert(pdv("kapandi-1") === undefined, "ajanTemizle pitbull durumunu sildi");
+    const { ajanTemizleHepsi: ath } = await import("../server/temizlik");
+    ath("kapandi-1");
+    assert(true, "ajanTemizleHepsi tum modullerde hatasiz calisti");
+  }
+
   console.log(hata === 0 ? "TUM TESTLER GECTI" : hata + " HATA");
   process.exit(hata === 0 ? 0 : 1);
 })();

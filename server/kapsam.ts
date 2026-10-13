@@ -8,6 +8,11 @@ export const KAPSAM_TAVAN = 3;
 
 const durum = new Map<string, number>();
 
+// K-0025 (A2-1): agent.closed sonrasi bellek sizintisini onler.
+export function ajanTemizle(agentId: string): void {
+  durum.delete(agentId);
+}
+
 export function kapsamSay(timeline: readonly AgentTimelineItem[]): { dosyalar: string[]; pencere: number } {
   const sonMesaj = sonKullaniciMesajiIndex(timeline);
   const cagri = toolCallOzetleri(sonMesaj >= 0 ? timeline.slice(sonMesaj + 1) : timeline);

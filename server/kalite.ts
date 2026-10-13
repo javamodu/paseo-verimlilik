@@ -6,6 +6,11 @@ const COOLDOWN_MS = 10 * 60_000;
 
 const cooldown = new Map<string, number>();
 
+// K-0025 (A2-1): agent.closed sonrasi bellek sizintisini onler.
+export function ajanTemizle(agentId: string): void {
+  cooldown.delete(agentId);
+}
+
 // Tur bazinda basarisiz cagri orani esigi asilirsa tek durtme (cooldown'lu).
 export function basarisizOranMesaji(agentId: string, ozetler: readonly ToolCallOzeti[], simdi = Date.now()): string | null {
   const toplam = ozetler.length;

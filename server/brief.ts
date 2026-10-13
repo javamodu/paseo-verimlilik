@@ -35,6 +35,12 @@ export function briefTara(timeline: readonly AgentTimelineItem[], gorulen?: Set<
 const durum = new Map<string, number>();
 const gorulenler = new Map<string, Set<string>>();
 
+// K-0025 (A2-1): agent.closed sonrasi bellek sizintisini onler.
+export function ajanTemizle(agentId: string): void {
+  durum.delete(agentId);
+  gorulenler.delete(agentId);
+}
+
 export async function briefKontrol(
   agentId: string,
   cwd: string,

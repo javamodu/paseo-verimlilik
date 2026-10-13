@@ -24,6 +24,11 @@ interface Beklenti {
 
 const beklentiler = new Map<string, Beklenti>();
 
+// K-0025 (A2-1): agent.closed sonrasi bellek sizintisini onler.
+export function ajanTemizle(agentId: string): void {
+  beklentiler.delete(agentId);
+}
+
 export function onboardingTara(agentId: string, cwd: string): void {
   const handoff = sonHandoff(cwd);
   if (handoff) {

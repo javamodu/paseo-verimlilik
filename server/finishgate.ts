@@ -8,6 +8,11 @@ const MAKS_ARDISIK_DURTME = 2;
 
 const durum = new Map<string, number>();
 
+// K-0025 (A2-1): agent.closed sonrasi bellek sizintisini onler.
+export function ajanTemizle(agentId: string): void {
+  durum.delete(agentId);
+}
+
 export async function finishGateKontrol(
   agentId: string,
   timeline: readonly AgentTimelineItem[],
